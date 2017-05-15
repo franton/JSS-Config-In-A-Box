@@ -13,8 +13,7 @@ I have merely restructured a lot of his code to suit my own needs
 
 ### Getting started
 
-1. Edit the jss-config-in-a-box.sh script variables.
-  - Server admin username
+1. Edit the jss-config-in-a-box.sh script variable, 
 2. Run the script.
 3. There is no step 3!
 
