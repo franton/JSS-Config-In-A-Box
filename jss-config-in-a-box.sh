@@ -131,7 +131,7 @@ getjssserverdetails()
 	# Check for the skip
 #	if [[ $path = "" ]];
 #	then
-		xmlloc="/Users/Shared/JSS_Config"
+		export xmlloc="/Users/Shared/JSS_Config"
 #	fi
 }
 
