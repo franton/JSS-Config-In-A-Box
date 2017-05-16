@@ -117,6 +117,7 @@ getjssserverdetails()
 	export destjssapipwd=$jssapipwd
 
 	# Ask which instance we need to process, check if it exists and go from there
+	echo -e "\n"
 	echo "Enter the destination JSS instance name to upload"
 	read -p "(Or enter for a non-context JSS) : " jssinstance
 
@@ -152,128 +153,132 @@ grabexistingjssxml()
 		echo -e "\n\nCreating ID list for ${jssitem[$loop]} on template JSS \n"
 		curl -s -k $origjssaddress/JSSResource/${jssitem[$loop]} --user "$origjssapiuser:$origjssapipwd" | xmllint --format - > $formattedList
 
-		if [ ${jssitem[$loop]} = "accounts" ]
+		if [ ${jssitem[$loop]} = "accounts" ];
+		then
+			if [ `cat "$formattedList" | grep "<users/>" | wc -l | awk '{ print $1 }'` = "0" ];
 			then
-				if [ `cat /Users/richardpurves/Desktop/JSS_Config/accounts/id_list/formattedList.xml | grep "<users/>" | wc -l | awk '{ print $1 }'` = "0" ];
-				then
-					if [ `cat "$formattedList" | grep "<users/>" | wc -l | awk '{ print $1 }'` = "0" ];
-					then
-						echo "Creating plain list of user ID's..."
-						cat $formattedList | sed '/<site>/,/<\/site>/d' | sed '/<groups>/,/<\/groups>/d' | awk -F '<id>|</id>' '/<id>/ {print $2}' > $plainListAccountsUsers
-					fi
-				fi
-
-				if [ `cat /Users/richardpurves/Desktop/JSS_Config/accounts/id_list/formattedList.xml | grep "<groups/>" | wc -l | awk '{ print $1 }'` != "1" ];
-				then
-					if  [ `cat "$formattedList" | grep "<groups/>" | wc -l | awk '{ print $1 }'` = "0" ];
-					then
-						echo "Creating plain list of group ID's..."
-						cat $formattedList | sed '/<site>/,/<\/site>/d'| sed '/<users>/,/<\/users>/d' | awk -F '<id>|</id>' '/<id>/ {print $2}' > $plainListAccountsGroups
-					fi
-				fi
+				echo "Creating plain list of user ID's..."
+				cat $formattedList | sed '/<site>/,/<\/site>/d' | sed '/<groups>/,/<\/groups>/d' | awk -F '<id>|</id>' '/<id>/ {print $2}' > $plainListAccountsUsers
 			else
-				if [ `cat "$formattedList" | grep "<size>0" | wc -l | awk '{ print $1 }'` = "0" ];
-				then
-					echo -e "\n\nCreating a plain list of ${jssitem[$loop]} ID's \n"
-					cat $formattedList |awk -F'<id>|</id>' '/<id>/ {print $2}' > $plainList
-				fi
+				rm $formattedList
+			fi
+
+			if  [ `cat "$formattedList" | grep "<groups/>" | wc -l | awk '{ print $1 }'` = "0" ];
+			then
+				echo "Creating plain list of group ID's..."
+				cat $formattedList | sed '/<site>/,/<\/site>/d'| sed '/<users>/,/<\/users>/d' | awk -F '<id>|</id>' '/<id>/ {print $2}' > $plainListAccountsGroups
+			else
+				rm $formattedList
+			fi
+		else
+			if [ `cat "$formattedList" | grep "<size>0" | wc -l | awk '{ print $1 }'` = "0" ];
+			then
+				echo -e "\n\nCreating a plain list of ${jssitem[$loop]} ID's \n"
+				cat $formattedList |awk -F'<id>|</id>' '/<id>/ {print $2}' > $plainList
+			else
+				rm $formattedList
+			fi
 		fi
 
-		# Work out how many ID's are present. Grab and download each one for the specific search we're doing. Special code for accounts because the API is annoyingly different from the rest.
-		case "${jssitem[$loop]}" in
-			accounts)
-				totalFetchedIDsUsers=$( cat "$plainListAccountsUsers" | wc -l | sed -e 's/^[ \t]*//' )
-				for userID in $( cat $plainListAccountsUsers )
-				do
-					echo "Downloading User ID number $userID ( $resultInt out of $totalFetchedIDsUsers )"
-					fetchedResultAccountsUsers=$( curl --silent -k --user "$origjssapiuser:$origjssapipwd" -H "Content-Type: application/xml" -X GET "$origjssaddress/JSSResource/${jssitem[$loop]}/userid/$userID" | xmllint --format - )
-					itemID=$( echo "$fetchedResultAccountsUsers" | grep "<id>" | awk -F '<id>|</id>' '{ print $2; exit; }')
-					itemName=$( echo "$fetchedResultAccountsUsers" | grep "<name>" | awk -F '<name>|</name>' '{ print $2; exit; }')
-					cleanedName=$( echo "$itemName" | sed 's/[:\/\\]//g' )
-					fileName="$cleanedName [ID $itemID]"
-					echo "$fetchedResultAccountsUsers" > $xmlloc/${jssitem[$loop]}/fetched_xml/user_"$resultInt.xml"
+		# Work out how many ID's are present IF formattedlist is present. Grab and download each one for the specific search we're doing. Special code for accounts because the API is annoyingly different from the rest.
+		if [ -f "$formattedList" ];
+		then
+			case "${jssitem[$loop]}" in
+				accounts)
+					totalFetchedIDsUsers=$( cat "$plainListAccountsUsers" | wc -l | sed -e 's/^[ \t]*//' )
+					for userID in $( cat $plainListAccountsUsers )
+					do
+						echo "Downloading User ID number $userID ( $resultInt out of $totalFetchedIDsUsers )"
+						fetchedResultAccountsUsers=$( curl --silent -k --user "$origjssapiuser:$origjssapipwd" -H "Content-Type: application/xml" -X GET "$origjssaddress/JSSResource/${jssitem[$loop]}/userid/$userID" | xmllint --format - )
+						itemID=$( echo "$fetchedResultAccountsUsers" | grep "<id>" | awk -F '<id>|</id>' '{ print $2; exit; }')
+						itemName=$( echo "$fetchedResultAccountsUsers" | grep "<name>" | awk -F '<name>|</name>' '{ print $2; exit; }')
+						cleanedName=$( echo "$itemName" | sed 's/[:\/\\]//g' )
+						fileName="$cleanedName [ID $itemID]"
+						echo "$fetchedResultAccountsUsers" > $xmlloc/${jssitem[$loop]}/fetched_xml/user_"$resultInt.xml"
 					
-					let "resultInt = $resultInt + 1"
-				done
+						let "resultInt = $resultInt + 1"
+					done
 
-				resultInt=1
+					resultInt=1
 
-				totalFetchedIDsGroups=$( cat "$plainListAccountsGroups" | wc -l | sed -e 's/^[ \t]*//' )
-				for groupID in $( cat $plainListAccountsGroups )
-				do
-					echo "Downloading Group ID number $groupID ( $resultInt out of $totalFetchedIDsGroups )"
-					fetchedResultAccountsGroups=$( curl --silent -k --user "$origjssapiuser:$origjssapipwd" -H "Content-Type: application/xml" -X GET "$origjssaddress/JSSResource/${jssitem[$loop]}/groupid/$groupID" | xmllint --format - )
-					itemID=$( echo "$fetchedResultAccountsGroups" | grep "<id>" | awk -F '<id>|</id>' '{ print $2; exit; }')
-					itemName=$( echo "$fetchedResultAccountsGroups" | grep "<name>" | awk -F '<name>|</name>' '{ print $2; exit; }')
-					cleanedName=$( echo "$itemName" | sed 's/[:\/\\]//g' )
-					fileName="$cleanedName [ID $itemID]"
-					echo "$fetchedResultAccountsGroups" > $xmlloc/${jssitem[$loop]}/fetched_xml/group_"$resultInt.xml"
+					totalFetchedIDsGroups=$( cat "$plainListAccountsGroups" | wc -l | sed -e 's/^[ \t]*//' )
+					for groupID in $( cat $plainListAccountsGroups )
+					do
+						echo "Downloading Group ID number $groupID ( $resultInt out of $totalFetchedIDsGroups )"
+						fetchedResultAccountsGroups=$( curl --silent -k --user "$origjssapiuser:$origjssapipwd" -H "Content-Type: application/xml" -X GET "$origjssaddress/JSSResource/${jssitem[$loop]}/groupid/$groupID" | xmllint --format - )
+						itemID=$( echo "$fetchedResultAccountsGroups" | grep "<id>" | awk -F '<id>|</id>' '{ print $2; exit; }')
+						itemName=$( echo "$fetchedResultAccountsGroups" | grep "<name>" | awk -F '<name>|</name>' '{ print $2; exit; }')
+						cleanedName=$( echo "$itemName" | sed 's/[:\/\\]//g' )
+						fileName="$cleanedName [ID $itemID]"
+						echo "$fetchedResultAccountsGroups" > $xmlloc/${jssitem[$loop]}/fetched_xml/group_"$resultInt.xml"
 					
-					let "resultInt = $resultInt + 1"
-				done			
-			;;
+						let "resultInt = $resultInt + 1"
+					done			
+				;;
 			
-			*)
-				totalFetchedIDs=`cat "$plainList" | wc -l | sed -e 's/^[ \t]*//'`
+				*)
+					totalFetchedIDs=`cat "$plainList" | wc -l | sed -e 's/^[ \t]*//'`
 
-				for apiID in $(cat $plainList)
-				do
-					echo "Downloading ID number $apiID ( $resultInt out of $totalFetchedIDs )"
-					curl -s -k --user "$origjssapiuser:$origjssapipwd" -H "Content-Type: application/xml" -X GET "$origjssaddress/JSSResource/${jssitem[$loop]}/id/$apiID" | xmllint --format - > $fetchedResult
-					resultInt=$(($resultInt + 1))
-					fetchedResult=$xmlloc/${jssitem[$loop]}/fetched_xml/result"$resultInt".xml
-				done	
-			;;
-		esac
+					for apiID in $(cat $plainList)
+					do
+						echo "Downloading ID number $apiID ( $resultInt out of $totalFetchedIDs )"
+						curl -s -k --user "$origjssapiuser:$origjssapipwd" -H "Content-Type: application/xml" -X GET "$origjssaddress/JSSResource/${jssitem[$loop]}/id/$apiID" | xmllint --format - > $fetchedResult
+						resultInt=$(($resultInt + 1))
+						fetchedResult=$xmlloc/${jssitem[$loop]}/fetched_xml/result"$resultInt".xml
+					done	
+				;;
+			esac
 			
-		# Depending which category we're dealing with, parse the grabbed files into something we can upload later.
-		case "${jssitem[$loop]}" in	
-			computergroups)
-				echo "Parsing JSS computer groups"
+			# Depending which category we're dealing with, parse the grabbed files into something we can upload later.
+			case "${jssitem[$loop]}" in	
+				computergroups)
+					echo "Parsing JSS computer groups"
 
-				for resourceXML in $(ls $xmlloc/${jssitem[$loop]}/fetched_xml)
-				do
-					echo "Parsing computer group: $resourceXML"
+					for resourceXML in $(ls $xmlloc/${jssitem[$loop]}/fetched_xml)
+					do
+						echo "Parsing computer group: $resourceXML"
 
-					if [[ `cat $xmlloc/${jssitem[$loop]}/fetched_xml/$resourceXML | grep "<is_smart>false</is_smart>"` ]]
-					then
-						echo "$resourceXML is a static computer group"
-						cat $xmlloc/${jssitem[$loop]}/fetched_xml/$resourceXML | grep -v "<id>" | sed '/<computers>/,/<\/computers/d' > $xmlloc/${jssitem[$loop]}/parsed_xml/static_group_parsed_"$resourceXML"
-					else
-						echo "$resourceXML is a smart computer group..."
-						cat $xmlloc/${jssitem[$loop]}/fetched_xml/$resourceXML | grep -v "<id>" | sed '/<computers>/,/<\/computers/d' > $xmlloc/${jssitem[$loop]}/parsed_xml/smart_group_parsed_"$resourceXML"
-					fi					
-				done
-			;;
+						if [[ `cat $xmlloc/${jssitem[$loop]}/fetched_xml/$resourceXML | grep "<is_smart>false</is_smart>"` ]]
+						then
+							echo "$resourceXML is a static computer group"
+							cat $xmlloc/${jssitem[$loop]}/fetched_xml/$resourceXML | grep -v "<id>" | sed '/<computers>/,/<\/computers/d' > $xmlloc/${jssitem[$loop]}/parsed_xml/static_group_parsed_"$resourceXML"
+						else
+							echo "$resourceXML is a smart computer group..."
+							cat $xmlloc/${jssitem[$loop]}/fetched_xml/$resourceXML | grep -v "<id>" | sed '/<computers>/,/<\/computers/d' > $xmlloc/${jssitem[$loop]}/parsed_xml/smart_group_parsed_"$resourceXML"
+						fi					
+					done
+				;;
 
-			policies|restrictedsoftware)
-				echo "Parsing ${jssitem[$loop]}"
+				policies|restrictedsoftware)
+					echo "Parsing ${jssitem[$loop]}"
 
-				for resourceXML in $(ls $xmlloc/${jssitem[$loop]}/fetched_xml)
-				do
-					echo "Parsing policy: $resourceXML"
+					for resourceXML in $(ls $xmlloc/${jssitem[$loop]}/fetched_xml)
+					do
+						echo "Parsing policy: $resourceXML"
 			
-					if [[ `cat $xmlloc/${jssitem[$loop]}/fetched_xml/$resourceXML | grep "<name>No category assigned</name>"` ]]
-					then
-						echo "Policy $resourceXML is not assigned to a category. Ignoring."
-					else
-						echo "Policy $resourceXML is correct. Processing."
-						cat $xmlloc/${jssitem[$loop]}/fetched_xml/$resourceXML | grep -v "<id>" | sed '/<computers>/,/<\/computers>/d' | sed '/<self_service_icon>/,/<\/self_service_icon>/d' | sed '/<limit_to_users>/,/<\/limit_to_users>/d' | sed '/<users>/,/<\/users>/d' | sed '/<user_groups>/,/<\/user_groups>/d' > $xmlloc/${jssitem[$loop]}/parsed_xml/parsed_"$resourceXML"
-					fi
-				done
-			;;
+						if [[ `cat $xmlloc/${jssitem[$loop]}/fetched_xml/$resourceXML | grep "<name>No category assigned</name>"` ]]
+						then
+							echo "Policy $resourceXML is not assigned to a category. Ignoring."
+						else
+							echo "Policy $resourceXML is correct. Processing."
+							cat $xmlloc/${jssitem[$loop]}/fetched_xml/$resourceXML | grep -v "<id>" | sed '/<computers>/,/<\/computers>/d' | sed '/<self_service_icon>/,/<\/self_service_icon>/d' | sed '/<limit_to_users>/,/<\/limit_to_users>/d' | sed '/<users>/,/<\/users>/d' | sed '/<user_groups>/,/<\/user_groups>/d' > $xmlloc/${jssitem[$loop]}/parsed_xml/parsed_"$resourceXML"
+						fi
+					done
+				;;
 
-			*)
-				echo "$jssResource - no need for extra special parsing. Removing references to ID's"
+				*)
+					echo "No special parsing needed for: $jssResource . Removing references to ID's"
 
-				for resourceXML in $(ls $xmlloc/${jssitem[$loop]}/fetched_xml)
-				do
-					echo "Parsing $resourceXML"
-					cat $xmlloc/${jssitem[$loop]}/fetched_xml/$resourceXML | grep -v "<id>" > $xmlloc/${jssitem[$loop]}/parsed_xml/parsed_"$resourceXML"
-				done
-			;;
-	
-		esac
+					for resourceXML in $(ls $xmlloc/${jssitem[$loop]}/fetched_xml)
+					do
+						echo "Parsing $resourceXML"
+						cat $xmlloc/${jssitem[$loop]}/fetched_xml/$resourceXML | grep -v "<id>" > $xmlloc/${jssitem[$loop]}/parsed_xml/parsed_"$resourceXML"
+					done
+				;;
+			esac
+		else
+			echo "Resource ${jssitem[$loop]} empty. Skipping."
+		fi
 	done
 	
 	# Setting IFS back to default 
