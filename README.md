@@ -1,5 +1,8 @@
 # JSS-Config-In-A-Box
 
+## WARNING: DO NOT USE IN PRODUCTION.
+### My last test resulted in some pretty catastrophic data loss.
+
 ### Introduction
 
 This allows you to clone a JSS via the API to a new JSS server.
