@@ -11,11 +11,11 @@
 # Version 0.2 : 15-07-2017 - Download works. Misses out empty items. Upload still fails hard.
 # Version 0.3 : 16-07-2017 - Upload code in test. Improvements to UI. Code simplification.
 # Version 0.4 : 16-07-2017 - Skips empty JSS categories on download. Properly archives existing download. Choice of storage location for xml files.
-# Version 0.5 : ??-07-2017 - Upload code testing competion
+# Version 0.5 : 16-07-2017 - Upload code testing competion
 
 # Set up variables here
 export resultInt=1
-export currentver="0.4"
+export currentver="0.5"
 export currentverdate="16th May 2017"
 
 # These are the categories we're going to save and process
@@ -126,13 +126,13 @@ getjssserverdetails()
 	# Where shall we store all this lovely xml?
 	echo -e "\n"
 	echo "Please enter the path to store data"
-	read -p "(Or enter to use $HOME/Desktop) : " path
+	read -p "(Or enter to use $HOME/Desktop) : " xmlloc
 
 	# Check for the skip
-	if [[ $path = "" ]];
-	then
-		xmlloc="$HOME/Desktop/JSS_Config"
-	fi
+#	if [[ $path = "" ]];
+#	then
+		xmlloc="/Users/Shared/JSS_Config"
+#	fi
 }
 
 grabexistingjssxml()
