@@ -10,13 +10,12 @@
 # Version 0.1 : 10-07-2017 - Initial Version
 # Version 0.2 : 15-07-2017 - Download works. Misses out empty items. Upload still fails hard.
 # Version 0.3 : 16-07-2017 - Upload code in test. Improvements to UI. Code simplification.
+# Version 0.4 : 16-07-2017 - Skips empty JSS categories on download. Properly archives existing download. Choice of storage location for xml files.
+# Version 0.5 : ??-07-2017 - Upload code testing competion
 
 # Set up variables here
-export useract="richardpurves"
-export userhome="/home/$useract"
-export xmlloc="$HOME/Desktop/JSS_Config"
 export resultInt=1
-export currentver="0.3"
+export currentver="0.4"
 export currentverdate="16th May 2017"
 
 # These are the categories we're going to save and process
@@ -83,13 +82,10 @@ doesxmlfolderexist()
 	# Check for existing items, archiving if necessary.
 	for (( loop=0; loop<${#jssitem[@]}; loop++ ))
 	do
-		if [ "$usearchive" = "Y" ];
+		if [ -d "$xmlloc"/"${jssitem[$loop]}" ]
 		then
-			if [ -d "$xmlloc"/"${jssitem[$loop]}" ]
-			then
-				ditto -ck "$xmlloc"/"${jssitem[$loop]}" "$xmlloc"/archives/"${jssitem[$loop]}"-$( date +%Y%m%d%H%M%S ).zip
-				rm -rf "$xmlloc/${jssitem[$loop]}"
-			fi
+			ditto -ck "$xmlloc"/"${jssitem[$loop]}" "$xmlloc"/archives/"${jssitem[$loop]}"-$( date +%Y%m%d%H%M%S ).zip
+			rm -rf "$xmlloc/${jssitem[$loop]}"
 		fi
 
 	# Check and create the JSS xml resource folders if missing.
@@ -125,6 +121,17 @@ getjssserverdetails()
 	if [[ $jssinstance != "" ]];
 	then
 		jssinstance="/$instance/"
+	fi
+
+	# Where shall we store all this lovely xml?
+	echo -e "\n"
+	echo "Please enter the path to store data"
+	read -p "(Or enter to use $HOME/Desktop) : " path
+
+	# Check for the skip
+	if [[ $path = "" ]];
+	then
+		xmlloc="$HOME/Desktop/JSS_Config"
 	fi
 }
 
@@ -232,7 +239,7 @@ grabexistingjssxml()
 			# Depending which category we're dealing with, parse the grabbed files into something we can upload later.
 			case "${jssitem[$loop]}" in	
 				computergroups)
-					echo "Parsing JSS computer groups"
+					echo -e "\nParsing JSS computer groups"
 
 					for resourceXML in $(ls $xmlloc/${jssitem[$loop]}/fetched_xml)
 					do
@@ -250,7 +257,7 @@ grabexistingjssxml()
 				;;
 
 				policies|restrictedsoftware)
-					echo "Parsing ${jssitem[$loop]}"
+					echo -e "\nParsing ${jssitem[$loop]}"
 
 					for resourceXML in $(ls $xmlloc/${jssitem[$loop]}/fetched_xml)
 					do
@@ -260,14 +267,14 @@ grabexistingjssxml()
 						then
 							echo "Policy $resourceXML is not assigned to a category. Ignoring."
 						else
-							echo "Policy $resourceXML is correct. Processing."
+							echo "Processing policy file $resourceXML ."
 							cat $xmlloc/${jssitem[$loop]}/fetched_xml/$resourceXML | grep -v "<id>" | sed '/<computers>/,/<\/computers>/d' | sed '/<self_service_icon>/,/<\/self_service_icon>/d' | sed '/<limit_to_users>/,/<\/limit_to_users>/d' | sed '/<users>/,/<\/users>/d' | sed '/<user_groups>/,/<\/user_groups>/d' > $xmlloc/${jssitem[$loop]}/parsed_xml/parsed_"$resourceXML"
 						fi
 					done
 				;;
 
 				*)
-					echo "No special parsing needed for: $jssResource . Removing references to ID's"
+					echo -e "\nNo special parsing needed for: ${jssitem[$loop]}. Removing references to ID's\n"
 
 					for resourceXML in $(ls $xmlloc/${jssitem[$loop]}/fetched_xml)
 					do
@@ -277,7 +284,7 @@ grabexistingjssxml()
 				;;
 			esac
 		else
-			echo "Resource ${jssitem[$loop]} empty. Skipping."
+			echo -e "\nResource ${jssitem[$loop]} empty. Skipping."
 		fi
 	done
 	
