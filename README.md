@@ -1,6 +1,6 @@
 # JSS-Config-In-A-Box
 
-## WARNING: DO NOT USE IN PRODUCTION.
+## Release Candidate 1
 
 ### Introduction
 
@@ -15,8 +15,11 @@ I have merely restructured a lot of his code to suit my own needs
 
 ### Getting started
 
-1. Edit the jss-config-in-a-box.sh script variable, 
-2. Run the script.
+1. Run the script.
+2. Follow the prompts.
 3. There is no step 3!
 
-The script will prompt you for your JSS server address, then API username and password. The menu is then self explanatory.
+You will be asked for a location to store xml data from the JSS API.
+If data already exists, then you'll be asked if you wish to archive it. Otherwise the folders will be created.
+
+You have two choices. Download or Upload. Selecting either will prompt for server details and credentials.
