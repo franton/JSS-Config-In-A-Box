@@ -1,7 +1,6 @@
 # JSS-Config-In-A-Box
 
 ## WARNING: DO NOT USE IN PRODUCTION.
-### My last test resulted in some pretty catastrophic data loss.
 
 ### Introduction
 
