@@ -12,11 +12,13 @@
 # Version 0.3 : 16-07-2017 - Upload code in test. Improvements to UI. Code simplification.
 # Version 0.4 : 16-07-2017 - Skips empty JSS categories on download. Properly archives existing download. Choice of storage location for xml files.
 # Version 0.5 : 17-07-2017 - Debugged condition that "for some reason" tried to delete my entire machine. Nearly succeeded too.
+#						   - Skips empty categories now for a significant speed improvement. Upload mostly works at this point.
+# Version 0.6 : 17-07-2016 - Check for existing xml. Creates folders if missing, archives existing files if required. Upload fails on a few things.
 
 # Set up variables here
 export resultInt=1
-export currentver="0.5"
-export currentverdate="16th May 2017"
+export currentver="0.6"
+export currentverdate="17th May 2017"
 
 # These are the categories we're going to save and process
 declare -a jssitem
@@ -43,40 +45,38 @@ jssitem[19]="vppassignments"
 jssitem[20]="vppinvitations"
 jssitem[21]="webhooks"
 jssitem[22]="diskencryptionconfigurations"
-jssitem[23]="allowedfileextensions"
-jssitem[24]="ebooks"
-jssitem[25]="computerextensionattributes" 	# Computer configuration
-jssitem[26]="dockitems"
-jssitem[27]="printers"
-jssitem[28]="licensedsoftware"
-jssitem[29]="scripts"
+jssitem[23]="ebooks"
+jssitem[24]="computerextensionattributes" 	# Computer configuration
+jssitem[25]="dockitems"
+jssitem[26]="printers"
+jssitem[27]="licensedsoftware"
+jssitem[28]="scripts"
+jssitem[29]="computergroups"
 jssitem[30]="restrictedsoftware"
-jssitem[31]="computergroups"
-jssitem[32]="osxconfigurationprofiles"
-jssitem[33]="macapplications"
-jssitem[34]="managedpreferenceprofiles"
-jssitem[35]="packages"
-jssitem[36]="policies"
-jssitem[37]="advancedcomputersearches"
-jssitem[38]="patches"
-jssitem[39]="mobiledevicegroups"			# Mobile configuration
-jssitem[40]="mobiledeviceapplications"
-jssitem[41]="mobiledeviceconfigurationprofiles"
-jssitem[42]="mobiledeviceenrollmentprofiles"
-jssitem[43]="mobiledeviceextensionattributes"
-jssitem[44]="mobiledeviceprovisioningprofiles"
-jssitem[45]="classes"
-jssitem[46]="advancedmobiledevicesearches"
-jssitem[47]="userextensionattributes"		# User configuration
-jssitem[48]="usergroups"
-jssitem[49]="users"
-jssitem[50]="advancedusersearches"
+jssitem[31]="osxconfigurationprofiles"
+jssitem[32]="macapplications"
+jssitem[33]="managedpreferenceprofiles"
+jssitem[34]="packages"
+jssitem[35]="policies"
+jssitem[36]="advancedcomputersearches"
+jssitem[37]="patches"
+jssitem[38]="mobiledevicegroups"			# Mobile configuration
+jssitem[39]="mobiledeviceapplications"
+jssitem[40]="mobiledeviceconfigurationprofiles"
+jssitem[41]="mobiledeviceenrollmentprofiles"
+jssitem[42]="mobiledeviceextensionattributes"
+jssitem[43]="mobiledeviceprovisioningprofiles"
+jssitem[44]="classes"
+jssitem[45]="advancedmobiledevicesearches"
+jssitem[46]="userextensionattributes"		# User configuration
+jssitem[47]="usergroups"
+jssitem[48]="users"
+jssitem[49]="advancedusersearches"
 
 # Start functions here
 doesxmlfolderexist()
 {
 	# Where shall we store all this lovely xml?
-	echo -e "\n"
 	echo "Please enter the path to store data"
 	read -p "(Or enter to use $HOME/Desktop/JSS_Config) : " xmlloc
 
@@ -87,16 +87,31 @@ doesxmlfolderexist()
 	fi
 
 	# Check and create the JSS xml folder and archive folders if missing.
-	[ ! -d "$xmlloc" ] && mkdir -p "$xmlloc"
-	[ ! -d "$xmlloc"/archives ] && mkdir -p "$xmlloc"/archives
-
+	if [ ! -d "$xmlloc" ];
+	then
+		mkdir -p "$xmlloc"
+		mkdir -p "$xmlloc"/archives
+	else
+		read -p "Do you wish to archive existing xml files? (Y/N) : " archive
+		if [ "$archive" = "y" ] && [ "$archive" = "Y" ];
+		then
+			archive="YES"
+		else
+			archive="NO"
+		fi
+	fi
+	
 	# Check for existing items, archiving if necessary.
 	for (( loop=0; loop<${#jssitem[@]}; loop++ ))
 	do
-		if [ `ls -1 "$xmlloc"/"${jssitem[$loop]}"/* 2>/dev/null | wc -l` -gt 0 ];
+		if [ "$archive" = "YES" ];
 		then
-			ditto -ck "$xmlloc"/"${jssitem[$loop]}" "$xmlloc"/archives/"${jssitem[$loop]}"-$( date +%Y%m%d%H%M%S ).zip
-			rm -rf "$xmlloc/${jssitem[$loop]}"
+			if [ `ls -1 "$xmlloc"/"${jssitem[$loop]}"/* 2>/dev/null | wc -l` -gt 0 ];
+			then
+				echo "Archiving "${jssitem[$loop]}" xml file(s)"
+				ditto -ck "$xmlloc"/"${jssitem[$loop]}" "$xmlloc"/archives/"${jssitem[$loop]}"-$( date +%Y%m%d%H%M%S ).zip
+				rm -rf "$xmlloc/${jssitem[$loop]}"
+			fi
 		fi
 
 	# Check and create the JSS xml resource folders if missing.
@@ -191,7 +206,7 @@ grabexistingjssxml()
 		fi
 
 		# Work out how many ID's are present IF formattedlist is present. Grab and download each one for the specific search we're doing. Special code for accounts because the API is annoyingly different from the rest.
-		if [ -f "$formattedList" ];
+		if [ `ls -1 "$xmlloc/${jssitem[$loop]}/id_list"/* 2>/dev/null | wc -l` -gt 0 ];
 		then
 			case "${jssitem[$loop]}" in
 				accounts)
@@ -303,78 +318,83 @@ puttonewjss()
 
 	for (( loop=0; loop<${#jssitem[@]}; loop++ ))
 	do
-		echo -e "\nPosting ${jssitem[$loop]} to new JSS instance: $destjssaddress$jssinstance"
+		if [ `ls -1 "$xmlloc"/"${jssitem[$loop]}"/parsed_xml/* 2>/dev/null | wc -l` -gt 0 ];
+		then
+			echo -e "\nPosting ${jssitem[$loop]} to new JSS instance: $destjssaddress$jssinstance"
 		
-		case "$jssitem[$loop]" in
-			accounts)	
-				echo "Posting user accounts."
+			case "$jssitem[$loop]" in
+				accounts)	
+					echo "Posting user accounts."
 
-				totalParsedResourceXML_user=$( ls "$xmlloc/${jssitem[$loop]}"/parsed_xml/user* | wc -l | sed -e 's/^[ \t]*//' )
-				postInt_user=0	
+					totalParsedResourceXML_user=$( ls "$xmlloc/${jssitem[$loop]}"/parsed_xml/user* | wc -l | sed -e 's/^[ \t]*//' )
+					postInt_user=0	
 
-				for xmlPost_user in $( ls "$xmlloc/${jssitem[$loop]}"/parsed_xml/user* )
-				do
-					let "postInt_user = $postInt_user + 1"
-					echo -e "\n----------\n----------"
-					echo -e "\nPosting $parsedXML_user ( $postInt_user out of $totalParsedResourceXML_user ) \n"
-					curl -k -g "$destjssaddress/JSSResource/${jssitem[$loop]}/userid/0" --user "$destinationJSSuser:$destinationJSSpw" -H "Content-Type: application/xml" -X POST -d "$xmlPost_user"
-				done
+					for xmlPost_user in $( ls "$xmlloc/${jssitem[$loop]}"/parsed_xml/user* )
+					do
+						let "postInt_user = $postInt_user + 1"
+						echo -e "\n----------\n----------"
+						echo -e "\nPosting $parsedXML_user ( $postInt_user out of $totalParsedResourceXML_user ) \n"
+						curl -k -g "$destjssaddress/JSSResource/${jssitem[$loop]}/userid/0" --user "$destinationJSSuser:$destinationJSSpw" -H "Content-Type: application/xml" -X POST -d "$xmlPost_user"
+					done
 
-				echo "Posting user group accounts."
+					echo "Posting user group accounts."
 
-				totalParsedResourceXML_group=$( ls "$xmlloc/${jssitem[$loop]}"/parsed_xml/group* | wc -l | sed -e 's/^[ \t]*//' )
-				postInt_group=0	
+					totalParsedResourceXML_group=$( ls "$xmlloc/${jssitem[$loop]}"/parsed_xml/group* | wc -l | sed -e 's/^[ \t]*//' )
+					postInt_group=0	
 
-				for xmlPost_group in $( ls "$xmlloc/${jssitem[$loop]}"/parsed_xml/group* )
-				do
-					let "postInt_group = $postInt_group + 1"
-					echo -e "\n----------\n----------"
-					echo -e "\nPosting $parsedXML_group ( $postInt_group out of $totalParsedResourceXML_group ) \n"
-					curl -k -g "$destjssaddress/JSSResource/${jssitem[$loop]}/groupid/0" --user "$destinationJSSuser:$destinationJSSpw" -H "Content-Type: application/xml" -X POST -d "$xmlPost_group"
-				done
-			;;	
+					for xmlPost_group in $( ls "$xmlloc/${jssitem[$loop]}"/parsed_xml/group* )
+					do
+						let "postInt_group = $postInt_group + 1"
+						echo -e "\n----------\n----------"
+						echo -e "\nPosting $parsedXML_group ( $postInt_group out of $totalParsedResourceXML_group ) \n"
+						curl -k -g "$destjssaddress/JSSResource/${jssitem[$loop]}/groupid/0" --user "$destinationJSSuser:$destinationJSSpw" -H "Content-Type: application/xml" -X POST -d "$xmlPost_group"
+					done
+				;;	
 				
-			computergroups)
-				echo "Posting static computer groups."
+				computergroups)
+					echo "Posting static computer groups."
 
-				totalParsedResourceXML_staticGroups=$(ls $xmlloc/${jssitem[$loop]}/parsed_xml/static_group_parsed* | wc -l | sed -e 's/^[ \t]*//')
-				postInt_static=0
+					totalParsedResourceXML_staticGroups=$(ls $xmlloc/${jssitem[$loop]}/parsed_xml/static_group_parsed* | wc -l | sed -e 's/^[ \t]*//')
+					postInt_static=0
 
-				for parsedXML_static in $(ls $xmlloc/${jssitem[$loop]}/parsed_xml/static_group_parsed*)
-				do
-					xmlPost_static=`cat $parsedXML_static`
-					let "postInt_static = $postInt_static + 1"
-					echo "Posting $parsedXML_static ( $postInt_static out of $totalParsedResourceXML_staticGroups )"
-					curl -s -k "$destjssaddress/JSSResource/${jssitem[$loop]}/id/0" --user "$destjssapiuser:$destjssapipwd" -H "Content-Type: application/xml" -X POST -d "$xmlPost_static"
-				done
+					for parsedXML_static in $(ls $xmlloc/${jssitem[$loop]}/parsed_xml/static_group_parsed*)
+					do
+						xmlPost_static=`cat $parsedXML_static`
+						let "postInt_static = $postInt_static + 1"
+						echo "Posting $parsedXML_static ( $postInt_static out of $totalParsedResourceXML_staticGroups )"
+						curl -s -k "$destjssaddress/JSSResource/${jssitem[$loop]}/id/0" --user "$destjssapiuser:$destjssapipwd" -H "Content-Type: application/xml" -X POST -d "$xmlPost_static"
+					done
 
-				echo "Posting smart computer groups"
+					echo "Posting smart computer groups"
 
-				totalParsedResourceXML_smartGroups=$(ls $xmlloc/${jssitem[$loop]}/parsed_xml/smart_group_parsed* | wc -l | sed -e 's/^[ \t]*//')
-				postInt_smart=0	
+					totalParsedResourceXML_smartGroups=$(ls $xmlloc/${jssitem[$loop]}/parsed_xml/smart_group_parsed* | wc -l | sed -e 's/^[ \t]*//')
+					postInt_smart=0	
 
-				for parsedXML_smart in $(ls $xmlloc/${jssitem[$loop]}/parsed_xml/smart_group_parsed*)
-				do
-					xmlPost_smart=`cat $parsedXML_smart`
-					let "postInt_smart = $postInt_smart + 1"
-					echo "Posting $parsedXML_smart ( $postInt_smart out of $totalParsedResourceXML_smartGroups )"
-					curl -s -k "$destjssaddress/JSSResource/${jssitem[$loop]}/id/0" --user "$destjssapiuser:$destjssapipwd" -H "Content-Type: application/xml" -X POST -d "$xmlPost_smart"
-				done
-			;;
+					for parsedXML_smart in $(ls $xmlloc/${jssitem[$loop]}/parsed_xml/smart_group_parsed*)
+					do
+						xmlPost_smart=`cat $parsedXML_smart`
+						let "postInt_smart = $postInt_smart + 1"
+						echo "Posting $parsedXML_smart ( $postInt_smart out of $totalParsedResourceXML_smartGroups )"
+						curl -s -k "$destjssaddress/JSSResource/${jssitem[$loop]}/id/0" --user "$destjssapiuser:$destjssapipwd" -H "Content-Type: application/xml" -X POST -d "$xmlPost_smart"
+					done
+				;;
 		
-			*)
-				totalParsedResourceXML=$(ls $xmlloc/${jssitem[$loop]}/parsed_xml | wc -l | sed -e 's/^[ \t]*//')
-				postInt=0	
+				*)
+					totalParsedResourceXML=$(ls $xmlloc/${jssitem[$loop]}/parsed_xml | wc -l | sed -e 's/^[ \t]*//')
+					postInt=0	
 
-				for parsedXML in $(ls $xmlloc/${jssitem[$loop]}/parsed_xml)
-				do
-					xmlPost=`cat $xmlloc/${jssitem[$loop]}/parsed_xml/$parsedXML`
-					let "postInt = $postInt + 1"
-					echo -e "\nPosting $parsedXML ( $postInt out of $totalParsedResourceXML ) \n"
-					curl -s -k "$destjssaddress/JSSResource/${jssitem[$loop]}/id/0" --user "$destjssapiuser:$destjssapipwd" -H "Content-Type: application/xml" -X POST -d "$xmlPost"
-				done
-			;;
-		esac
+					for parsedXML in $(ls $xmlloc/${jssitem[$loop]}/parsed_xml)
+					do
+						xmlPost=`cat $xmlloc/${jssitem[$loop]}/parsed_xml/$parsedXML`
+						let "postInt = $postInt + 1"
+						echo -e "\nPosting $parsedXML ( $postInt out of $totalParsedResourceXML ) \n"
+						curl -s -k "$destjssaddress/JSSResource/${jssitem[$loop]}/id/0" --user "$destjssapiuser:$destjssapipwd" -H "Content-Type: application/xml" -X POST -d "$xmlPost"
+					done
+				;;
+			esac		
+		else
+			echo -e "\nResource ${jssitem[$loop]} empty. Skipping."
+		fi
 	done
 
 	# Setting IFS back to default 
@@ -386,13 +406,6 @@ MainMenu()
 	# Set IFS to only use new lines as field separator.
 	OIFS=$IFS
 	IFS=$'\n'
-
-	# Start menu screen here
-	echo -e "\n----------------------------------------"
-	echo -e "\n          JSS Config in a Box"
-	echo -e "\n----------------------------------------"
-	echo -e "    Version $currentver - $currentverdate"
-	echo -e "----------------------------------------\n"
 
 	while [[ $choice != "q" ]]
 	do
@@ -415,12 +428,18 @@ MainMenu()
 			*)
 				echo -e "\nIncorrect input. Please try again." ;;
 		esac
-		
 	done
-	
+
 	# Setting IFS back to default 
 	IFS=$OIFS
 }
+
+# Start menu screen here
+echo -e "\n----------------------------------------"
+echo -e "\n          JSS Config in a Box"
+echo -e "\n----------------------------------------"
+echo -e "    Version $currentver - $currentverdate"
+echo -e "----------------------------------------\n"
 
 # Call functions to make this work here
 doesxmlfolderexist
