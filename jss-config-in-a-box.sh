@@ -11,7 +11,7 @@
 # Version 0.2 : 15-07-2017 - Download works. Misses out empty items. Upload still fails hard.
 # Version 0.3 : 16-07-2017 - Upload code in test. Improvements to UI. Code simplification.
 # Version 0.4 : 16-07-2017 - Skips empty JSS categories on download. Properly archives existing download. Choice of storage location for xml files.
-# Version 0.5 : 16-07-2017 - Upload code testing competion
+# Version 0.5 : 17-07-2017 - Debugged condition that "for some reason" tried to delete my entire machine. Nearly succeeded too.
 
 # Set up variables here
 export resultInt=1
@@ -75,6 +75,17 @@ jssitem[50]="advancedusersearches"
 # Start functions here
 doesxmlfolderexist()
 {
+	# Where shall we store all this lovely xml?
+	echo -e "\n"
+	echo "Please enter the path to store data"
+	read -p "(Or enter to use $HOME/Desktop/JSS_Config) : " xmlloc
+
+	# Check for the skip
+	if [[ $path = "" ]];
+	then
+		export xmlloc="$HOME/Desktop/JSS_Config"
+	fi
+
 	# Check and create the JSS xml folder and archive folders if missing.
 	[ ! -d "$xmlloc" ] && mkdir -p "$xmlloc"
 	[ ! -d "$xmlloc"/archives ] && mkdir -p "$xmlloc"/archives
@@ -82,17 +93,20 @@ doesxmlfolderexist()
 	# Check for existing items, archiving if necessary.
 	for (( loop=0; loop<${#jssitem[@]}; loop++ ))
 	do
-		if [ -d "$xmlloc"/"${jssitem[$loop]}" ]
+		if [ `ls -1 "$xmlloc"/"${jssitem[$loop]}"/* 2>/dev/null | wc -l` -gt 0 ];
 		then
 			ditto -ck "$xmlloc"/"${jssitem[$loop]}" "$xmlloc"/archives/"${jssitem[$loop]}"-$( date +%Y%m%d%H%M%S ).zip
 			rm -rf "$xmlloc/${jssitem[$loop]}"
 		fi
 
 	# Check and create the JSS xml resource folders if missing.
-		mkdir -p "$xmlloc/${jssitem[$loop]}"
-		mkdir -p "$xmlloc/${jssitem[$loop]}/id_list"
-		mkdir -p "$xmlloc/${jssitem[$loop]}/fetched_xml"
-		mkdir -p "$xmlloc/${jssitem[$loop]}/parsed_xml"
+		if [ ! -f "$xmlloc/${jssitem[$loop]}" ];
+		then
+			mkdir -p "$xmlloc/${jssitem[$loop]}"
+			mkdir -p "$xmlloc/${jssitem[$loop]}/id_list"
+			mkdir -p "$xmlloc/${jssitem[$loop]}/fetched_xml"
+			mkdir -p "$xmlloc/${jssitem[$loop]}/parsed_xml"
+		fi
 	done
 }
 
@@ -122,17 +136,6 @@ getjssserverdetails()
 	then
 		jssinstance="/$instance/"
 	fi
-
-	# Where shall we store all this lovely xml?
-	echo -e "\n"
-	echo "Please enter the path to store data"
-	read -p "(Or enter to use $HOME/Desktop) : " xmlloc
-
-	# Check for the skip
-#	if [[ $path = "" ]];
-#	then
-		export xmlloc="/Users/Shared/JSS_Config"
-#	fi
 }
 
 grabexistingjssxml()
