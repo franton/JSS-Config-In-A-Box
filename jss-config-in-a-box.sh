@@ -13,11 +13,12 @@
 # Version 0.4 : 16-07-2017 - Skips empty JSS categories on download. Properly archives existing download. Choice of storage location for xml files.
 # Version 0.5 : 17-07-2017 - Debugged condition that "for some reason" tried to delete my entire machine. Nearly succeeded too.
 #						   - Skips empty categories now for a significant speed improvement. Upload mostly works at this point.
-# Version 0.6 : 17-07-2016 - Check for existing xml. Creates folders if missing, archives existing files if required. Upload fails on a few things.
+# Version 0.6 : 17-07-2017 - Check for existing xml. Creates folders if missing, archives existing files if required. Upload fails on a few things.
+# Version 0.7 : 17-07-2017 - Edging closer towards release candidate status. API code seems happier. App layout work required next.
 
 # Set up variables here
 export resultInt=1
-export currentver="0.6"
+export currentver="0.7"
 export currentverdate="17th May 2017"
 
 # These are the categories we're going to save and process
@@ -125,34 +126,6 @@ doesxmlfolderexist()
 	done
 }
 
-getjssserverdetails()
-{
-	read -p "Enter the originating JSS server address (https://www.example.com:8443) : " jssaddress
-	read -p "Enter the originating JSS server api username : " jssapiuser
-	read -p "Enter the originating JSS api user password : " -s jssapipwd
-	export origjssaddress=$jssaddress
-	export origjssapiuser=$jssapiuser
-	export origjssapipwd=$jssapipwd
-	echo -e "\n"
-	read -p "Enter the destination JSS server address (https://example.jamfcloud.com:443) : " jssaddress
-	read -p "Enter the destination JSS server api username : " jssapiuser
-	read -p "Enter the destination JSS api user password : " -s jssapipwd
-	export destjssaddress=$jssaddress
-	export destjssapiuser=$jssapiuser
-	export destjssapipwd=$jssapipwd
-
-	# Ask which instance we need to process, check if it exists and go from there
-	echo -e "\n"
-	echo "Enter the destination JSS instance name to upload"
-	read -p "(Or enter for a non-context JSS) : " jssinstance
-
-	# Check for the skip
-	if [[ $jssinstance != "" ]];
-	then
-		jssinstance="/$instance/"
-	fi
-}
-
 grabexistingjssxml()
 {
 	# Setting IFS Env to only use new lines as field seperator 
@@ -162,7 +135,7 @@ grabexistingjssxml()
 	# Loop around the array of JSS categories we set up earlier.
 	for (( loop=0; loop<${#jssitem[@]}; loop++ ))
 	do	
-		# Set our result incremental variable to 1 (just so we can reset and rerun this section without quitting the script)
+		# Set our result incremental variable to 1
 		export resultInt=1
 
 		# Work out where things are going to be stored on this loop
@@ -320,34 +293,35 @@ puttonewjss()
 	do
 		if [ `ls -1 "$xmlloc"/"${jssitem[$loop]}"/parsed_xml/* 2>/dev/null | wc -l` -gt 0 ];
 		then
+			# Set our result incremental variable to 1
+			export resultInt=1
+
 			echo -e "\nPosting ${jssitem[$loop]} to new JSS instance: $destjssaddress$jssinstance"
 		
-			case "$jssitem[$loop]" in
-				accounts)	
+			case "${jssitem[$loop]}" in
+				accounts)
 					echo "Posting user accounts."
 
-					totalParsedResourceXML_user=$( ls "$xmlloc/${jssitem[$loop]}"/parsed_xml/user* | wc -l | sed -e 's/^[ \t]*//' )
+					totalParsedResourceXML_user=$( ls $xmlloc/${jssitem[$loop]}/parsed_xml/*user* | wc -l | sed -e 's/^[ \t]*//' )
 					postInt_user=0	
 
-					for xmlPost_user in $( ls "$xmlloc/${jssitem[$loop]}"/parsed_xml/user* )
+					for xmlPost_user in $(ls -1 $xmlloc/${jssitem[$loop]}/parsed_xml/*user*)
 					do
 						let "postInt_user = $postInt_user + 1"
-						echo -e "\n----------\n----------"
-						echo -e "\nPosting $parsedXML_user ( $postInt_user out of $totalParsedResourceXML_user ) \n"
-						curl -k -g "$destjssaddress/JSSResource/${jssitem[$loop]}/userid/0" --user "$destinationJSSuser:$destinationJSSpw" -H "Content-Type: application/xml" -X POST -d "$xmlPost_user"
+						echo "Posting $xmlPost_user ( $postInt_user out of $totalParsedResourceXML_user )"
+						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$xmlPost_user" "$destjssaddress/JSSResource/accounts/userid/0" -u "$destjssapiuser:$destjssapipwd" 1>/dev/null 2>&1
 					done
 
 					echo "Posting user group accounts."
 
-					totalParsedResourceXML_group=$( ls "$xmlloc/${jssitem[$loop]}"/parsed_xml/group* | wc -l | sed -e 's/^[ \t]*//' )
+					totalParsedResourceXML_group=$( ls $xmlloc/${jssitem[$loop]}/parsed_xml/*group* | wc -l | sed -e 's/^[ \t]*//' )
 					postInt_group=0	
 
-					for xmlPost_group in $( ls "$xmlloc/${jssitem[$loop]}"/parsed_xml/group* )
+					for xmlPost_group in $(ls -1 $xmlloc/${jssitem[$loop]}/parsed_xml/*group*)
 					do
 						let "postInt_group = $postInt_group + 1"
-						echo -e "\n----------\n----------"
-						echo -e "\nPosting $parsedXML_group ( $postInt_group out of $totalParsedResourceXML_group ) \n"
-						curl -k -g "$destjssaddress/JSSResource/${jssitem[$loop]}/groupid/0" --user "$destinationJSSuser:$destinationJSSpw" -H "Content-Type: application/xml" -X POST -d "$xmlPost_group"
+						echo "Posting $xmlPost_group ( $postInt_group out of $totalParsedResourceXML_group )"
+						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$xmlPost_group" "$destjssaddress/JSSResource/accounts/groupid/0" -u "$destjssapiuser:$destjssapipwd" 1>/dev/null 2>&1
 					done
 				;;	
 				
@@ -357,12 +331,11 @@ puttonewjss()
 					totalParsedResourceXML_staticGroups=$(ls $xmlloc/${jssitem[$loop]}/parsed_xml/static_group_parsed* | wc -l | sed -e 's/^[ \t]*//')
 					postInt_static=0
 
-					for parsedXML_static in $(ls $xmlloc/${jssitem[$loop]}/parsed_xml/static_group_parsed*)
+					for parsedXML_static in $(ls -1 $xmlloc/${jssitem[$loop]}/parsed_xml/static_group_parsed*)
 					do
-						xmlPost_static=`cat $parsedXML_static`
 						let "postInt_static = $postInt_static + 1"
 						echo "Posting $parsedXML_static ( $postInt_static out of $totalParsedResourceXML_staticGroups )"
-						curl -s -k "$destjssaddress/JSSResource/${jssitem[$loop]}/id/0" --user "$destjssapiuser:$destjssapipwd" -H "Content-Type: application/xml" -X POST -d "$xmlPost_static"
+						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$xmlloc/${jssitem[$loop]}/parsed_xml/$parsedXML_static" "$destjssaddress/JSSResource/${jssitem[$loop]}/id/0" -u "$destjssapiuser:$destjssapipwd" 1>/dev/null 2>&1
 					done
 
 					echo "Posting smart computer groups"
@@ -370,12 +343,11 @@ puttonewjss()
 					totalParsedResourceXML_smartGroups=$(ls $xmlloc/${jssitem[$loop]}/parsed_xml/smart_group_parsed* | wc -l | sed -e 's/^[ \t]*//')
 					postInt_smart=0	
 
-					for parsedXML_smart in $(ls $xmlloc/${jssitem[$loop]}/parsed_xml/smart_group_parsed*)
+					for parsedXML_smart in $(ls -1 $xmlloc/${jssitem[$loop]}/parsed_xml/smart_group_parsed*)
 					do
-						xmlPost_smart=`cat $parsedXML_smart`
 						let "postInt_smart = $postInt_smart + 1"
 						echo "Posting $parsedXML_smart ( $postInt_smart out of $totalParsedResourceXML_smartGroups )"
-						curl -s -k "$destjssaddress/JSSResource/${jssitem[$loop]}/id/0" --user "$destjssapiuser:$destjssapipwd" -H "Content-Type: application/xml" -X POST -d "$xmlPost_smart"
+						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$xmlloc/${jssitem[$loop]}/parsed_xml/$parsedXML_smart" "$destjssaddress/JSSResource/${jssitem[$loop]}/id/0" -u "$destjssapiuser:$destjssapipwd" 1>/dev/null 2>&1
 					done
 				;;
 		
@@ -385,10 +357,9 @@ puttonewjss()
 
 					for parsedXML in $(ls $xmlloc/${jssitem[$loop]}/parsed_xml)
 					do
-						xmlPost=`cat $xmlloc/${jssitem[$loop]}/parsed_xml/$parsedXML`
 						let "postInt = $postInt + 1"
-						echo -e "\nPosting $parsedXML ( $postInt out of $totalParsedResourceXML ) \n"
-						curl -s -k "$destjssaddress/JSSResource/${jssitem[$loop]}/id/0" --user "$destjssapiuser:$destjssapipwd" -H "Content-Type: application/xml" -X POST -d "$xmlPost"
+						echo "Posting $parsedXML ( $postInt out of $totalParsedResourceXML )"
+						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$xmlloc/${jssitem[$loop]}/parsed_xml/$parsedXML" "$destjssaddress/JSSResource/${jssitem[$loop]}/id/0" -u "$destjssapiuser:$destjssapipwd" 1>/dev/null 2>&1
 					done
 				;;
 			esac		
@@ -419,14 +390,42 @@ MainMenu()
 
 		case "$choice" in
 			1)
-				grabexistingjssxml ;;
+				read -p "Enter the originating JSS server address (https://www.example.com:8443) : " jssaddress
+				read -p "Enter the originating JSS server api username : " jssapiuser
+				read -p "Enter the originating JSS api user password : " -s jssapipwd
+				export origjssaddress=$jssaddress
+				export origjssapiuser=$jssapiuser
+				export origjssapipwd=$jssapipwd
+
+				grabexistingjssxml
+			;;
 			2)
-				puttonewjss ;;
+				read -p "Enter the destination JSS server address (https://example.jamfcloud.com:443) : " jssaddress
+				read -p "Enter the destination JSS server api username : " jssapiuser
+				read -p "Enter the destination JSS api user password : " -s jssapipwd
+				export destjssaddress=$jssaddress
+				export destjssapiuser=$jssapiuser
+				export destjssapipwd=$jssapipwd
+
+				# Ask which instance we need to process, check if it exists and go from there
+				echo -e "\n"
+				echo "Enter the destination JSS instance name to upload"
+				read -p "(Or enter for a non-context JSS) : " jssinstance
+
+				# Check for the skip
+				if [[ $jssinstance != "" ]];
+				then
+					jssinstance="/$instance/"
+				fi
+
+				puttonewjss				
+			;;
 			q)
 				echo -e "\nThank you for using JSS Config in a Box!"
-				;;
+			;;
 			*)
-				echo -e "\nIncorrect input. Please try again." ;;
+				echo -e "\nIncorrect input. Please try again." 
+			;;
 		esac
 	done
 
@@ -443,7 +442,6 @@ echo -e "----------------------------------------\n"
 
 # Call functions to make this work here
 doesxmlfolderexist
-getjssserverdetails
 MainMenu
 
 # All done!
