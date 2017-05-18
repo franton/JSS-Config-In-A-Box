@@ -15,11 +15,12 @@
 #						   - Skips empty categories now for a significant speed improvement. Upload mostly works at this point.
 # Version 0.6 : 17-07-2017 - Check for existing xml. Creates folders if missing, archives existing files if required. Upload fails on a few things.
 # Version 0.7 : 17-07-2017 - Edging closer towards release candidate status. API code seems happier. App layout work required next.
+# Version 0.8 : 18-07-2017 - Mostly working. Fails on duplicate account name(s) (expected). Will upload App Store apps, but error if VPP isn't working (expected). Fails on policies that create accounts (huh?).
 
 # Set up variables here
 export resultInt=1
-export currentver="0.7"
-export currentverdate="17th May 2017"
+export currentver="0.8"
+export currentverdate="18th May 2017"
 
 # These are the categories we're going to save and process
 declare -a jssitem
@@ -78,7 +79,7 @@ jssitem[49]="advancedusersearches"
 doesxmlfolderexist()
 {
 	# Where shall we store all this lovely xml?
-	echo "Please enter the path to store data"
+	echo -e "\nPlease enter the path to store data"
 	read -p "(Or enter to use $HOME/Desktop/JSS_Config) : " xmlloc
 
 	# Check for the skip
@@ -93,6 +94,7 @@ doesxmlfolderexist()
 		mkdir -p "$xmlloc"
 		mkdir -p "$xmlloc"/archives
 	else
+		echo -e "\n"
 		read -p "Do you wish to archive existing xml files? (Y/N) : " archive
 		if [ "$archive" = "y" ] && [ "$archive" = "Y" ];
 		then
@@ -296,11 +298,11 @@ puttonewjss()
 			# Set our result incremental variable to 1
 			export resultInt=1
 
-			echo -e "\nPosting ${jssitem[$loop]} to new JSS instance: $destjssaddress$jssinstance"
+			echo -e "\n\nPosting ${jssitem[$loop]} to new JSS instance: $destjssaddress$jssinstance"
 		
 			case "${jssitem[$loop]}" in
 				accounts)
-					echo "Posting user accounts."
+					echo -e "\nPosting user accounts."
 
 					totalParsedResourceXML_user=$( ls $xmlloc/${jssitem[$loop]}/parsed_xml/*user* | wc -l | sed -e 's/^[ \t]*//' )
 					postInt_user=0	
@@ -308,11 +310,11 @@ puttonewjss()
 					for xmlPost_user in $(ls -1 $xmlloc/${jssitem[$loop]}/parsed_xml/*user*)
 					do
 						let "postInt_user = $postInt_user + 1"
-						echo "Posting $xmlPost_user ( $postInt_user out of $totalParsedResourceXML_user )"
-						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$xmlPost_user" "$destjssaddress/JSSResource/accounts/userid/0" -u "$destjssapiuser:$destjssapipwd" 1>/dev/null 2>&1
+						echo -e "\nPosting $xmlPost_user ( $postInt_user out of $totalParsedResourceXML_user )"
+						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$xmlPost_user" "$destjssaddress/JSSResource/accounts/userid/0" -u "$destjssapiuser:$destjssapipwd"
 					done
 
-					echo "Posting user group accounts."
+					echo -e "\nPosting user group accounts."
 
 					totalParsedResourceXML_group=$( ls $xmlloc/${jssitem[$loop]}/parsed_xml/*group* | wc -l | sed -e 's/^[ \t]*//' )
 					postInt_group=0	
@@ -320,13 +322,13 @@ puttonewjss()
 					for xmlPost_group in $(ls -1 $xmlloc/${jssitem[$loop]}/parsed_xml/*group*)
 					do
 						let "postInt_group = $postInt_group + 1"
-						echo "Posting $xmlPost_group ( $postInt_group out of $totalParsedResourceXML_group )"
-						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$xmlPost_group" "$destjssaddress/JSSResource/accounts/groupid/0" -u "$destjssapiuser:$destjssapipwd" 1>/dev/null 2>&1
+						echo -e "\nPosting $xmlPost_group ( $postInt_group out of $totalParsedResourceXML_group )"
+						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$xmlPost_group" "$destjssaddress/JSSResource/accounts/groupid/0" -u "$destjssapiuser:$destjssapipwd"
 					done
 				;;	
 				
 				computergroups)
-					echo "Posting static computer groups."
+					echo -e "\nPosting static computer groups."
 
 					totalParsedResourceXML_staticGroups=$(ls $xmlloc/${jssitem[$loop]}/parsed_xml/static_group_parsed* | wc -l | sed -e 's/^[ \t]*//')
 					postInt_static=0
@@ -334,11 +336,11 @@ puttonewjss()
 					for parsedXML_static in $(ls -1 $xmlloc/${jssitem[$loop]}/parsed_xml/static_group_parsed*)
 					do
 						let "postInt_static = $postInt_static + 1"
-						echo "Posting $parsedXML_static ( $postInt_static out of $totalParsedResourceXML_staticGroups )"
-						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$xmlloc/${jssitem[$loop]}/parsed_xml/$parsedXML_static" "$destjssaddress/JSSResource/${jssitem[$loop]}/id/0" -u "$destjssapiuser:$destjssapipwd" 1>/dev/null 2>&1
+						echo -e "\nPosting $parsedXML_static ( $postInt_static out of $totalParsedResourceXML_staticGroups )"
+						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$parsedXML_static" "$destjssaddress/JSSResource/${jssitem[$loop]}/id/0" -u "$destjssapiuser:$destjssapipwd"
 					done
 
-					echo "Posting smart computer groups"
+					echo -e "\nPosting smart computer groups"
 
 					totalParsedResourceXML_smartGroups=$(ls $xmlloc/${jssitem[$loop]}/parsed_xml/smart_group_parsed* | wc -l | sed -e 's/^[ \t]*//')
 					postInt_smart=0	
@@ -346,8 +348,8 @@ puttonewjss()
 					for parsedXML_smart in $(ls -1 $xmlloc/${jssitem[$loop]}/parsed_xml/smart_group_parsed*)
 					do
 						let "postInt_smart = $postInt_smart + 1"
-						echo "Posting $parsedXML_smart ( $postInt_smart out of $totalParsedResourceXML_smartGroups )"
-						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$xmlloc/${jssitem[$loop]}/parsed_xml/$parsedXML_smart" "$destjssaddress/JSSResource/${jssitem[$loop]}/id/0" -u "$destjssapiuser:$destjssapipwd" 1>/dev/null 2>&1
+						echo -e "\nPosting $parsedXML_smart ( $postInt_smart out of $totalParsedResourceXML_smartGroups )"
+						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$parsedXML_smart" "$destjssaddress/JSSResource/${jssitem[$loop]}/id/0" -u "$destjssapiuser:$destjssapipwd"
 					done
 				;;
 		
@@ -358,8 +360,8 @@ puttonewjss()
 					for parsedXML in $(ls $xmlloc/${jssitem[$loop]}/parsed_xml)
 					do
 						let "postInt = $postInt + 1"
-						echo "Posting $parsedXML ( $postInt out of $totalParsedResourceXML )"
-						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$xmlloc/${jssitem[$loop]}/parsed_xml/$parsedXML" "$destjssaddress/JSSResource/${jssitem[$loop]}/id/0" -u "$destjssapiuser:$destjssapipwd" 1>/dev/null 2>&1
+						echo -e "\nPosting $parsedXML ( $postInt out of $totalParsedResourceXML )"
+						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$xmlloc/${jssitem[$loop]}/parsed_xml/$parsedXML" "$destjssaddress/JSSResource/${jssitem[$loop]}/id/0" -u "$destjssapiuser:$destjssapipwd"
 					done
 				;;
 			esac		
@@ -380,8 +382,9 @@ MainMenu()
 
 	while [[ $choice != "q" ]]
 	do
-		echo -e "\nMain Menu\n"
-		echo -e "1) Grab config from template JSS"
+		echo -e "\nMain Menu"
+		echo -e "=========\n"
+		echo -e "1) Download config from original JSS"
 		echo -e "2) Upload config to new JSS instance"
 
 		echo -e "q) Quit!\n"
@@ -390,6 +393,7 @@ MainMenu()
 
 		case "$choice" in
 			1)
+				echo -e "\n"
 				read -p "Enter the originating JSS server address (https://www.example.com:8443) : " jssaddress
 				read -p "Enter the originating JSS server api username : " jssapiuser
 				read -p "Enter the originating JSS api user password : " -s jssapipwd
@@ -400,6 +404,7 @@ MainMenu()
 				grabexistingjssxml
 			;;
 			2)
+				echo -e "\n"
 				read -p "Enter the destination JSS server address (https://example.jamfcloud.com:443) : " jssaddress
 				read -p "Enter the destination JSS server api username : " jssapiuser
 				read -p "Enter the destination JSS api user password : " -s jssapipwd
@@ -434,11 +439,25 @@ MainMenu()
 }
 
 # Start menu screen here
+clear
 echo -e "\n----------------------------------------"
 echo -e "\n          JSS Config in a Box"
 echo -e "\n----------------------------------------"
 echo -e "    Version $currentver - $currentverdate"
 echo -e "----------------------------------------\n"
+echo -e "** Very Important Info **"
+echo -e "\n1. Passwords WILL NOT be migrated with standard accounts. You must put these in again manually."
+echo -e "2. Both macOS and iOS devices will NOT be migrated at all."
+echo -e "3. Smart Computer Groups will only contain logic information."
+echo -e "4. Static Computer groups will only contain name and site membership. Devices must be added manually."
+echo -e "5. Distribution Point failover settings will NOT be included."
+echo -e "6. Distribution Point passwords for Casper R/O and Casper R/W accounts will NOT be included."
+echo -e "7. LDAP Authentication passwords will NOT be included."
+echo -e "8. Directory Binding account passwords will NOT be included."
+echo -e "9. Individual computers that are excluded from restricted software items WILL NOT be included in migration."
+echo -e "10. Policies that are not assigned to a category will NOT be migrated."
+echo -e "11. Policies that have Self Service icons and individual computers as a scope or exclusion will have these items missing."
+echo -e "12. Policies with LDAP Users and Groups limitations will have these stripped before migration."
 
 # Call functions to make this work here
 doesxmlfolderexist
