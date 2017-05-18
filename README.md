@@ -1,6 +1,6 @@
 # JSS-Config-In-A-Box
 
-## Release Candidate 1
+## Release Candidate 2
 
 ### Introduction
 
