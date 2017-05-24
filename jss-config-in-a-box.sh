@@ -7,20 +7,21 @@
 # His hard work is acknowledged and gratefully used. (and abused).
 
 # Author      : richard@richard-purves.com
-# Version 0.1 : 10-07-2017 - Initial Version
-# Version 0.2 : 15-07-2017 - Download works. Misses out empty items. Upload still fails hard.
-# Version 0.3 : 16-07-2017 - Upload code in test. Improvements to UI. Code simplification.
-# Version 0.4 : 16-07-2017 - Skips empty JSS categories on download. Properly archives existing download. Choice of storage location for xml files.
-# Version 0.5 : 17-07-2017 - Debugged condition that "for some reason" tried to delete my entire machine. Nearly succeeded too.
-#						   - Skips empty categories now for a significant speed improvement. Upload mostly works at this point.
-# Version 0.6 : 17-07-2017 - Check for existing xml. Creates folders if missing, archives existing files if required. Upload fails on a few things.
-# Version 0.7 : 17-07-2017 - Edging closer towards release candidate status. API code seems happier. App layout work required next.
-# Version 0.8 : 18-07-2017 - Mostly working. Fails on duplicate account name(s) (expected). Will upload App Store apps, but error if VPP isn't working (expected). Fails on policies that create accounts (huh?).
+# v0.1 : 10-07-2017 - Initial Version
+# v0.2 : 15-07-2017 - Download works. Misses out empty items. Upload still fails hard.
+# v0.3 : 16-07-2017 - Upload code in test. Improvements to UI. Code simplification.
+# v0.4 : 16-07-2017 - Skips empty JSS categories on download. Properly archives existing download. Choice of storage location for xml files.
+# v0.5 : 17-07-2017 - Debugged condition that "for some reason" tried to delete my entire machine. Nearly succeeded too.
+#					- Skips empty categories now for a significant speed improvement. Upload mostly works at this point.
+# v0.6 : 17-07-2017 - Check for existing xml. Creates folders if missing, archives existing files if required. Upload fails on a few things.
+# v0.7 : 17-07-2017 - Edging closer towards release candidate status. API code seems happier. App layout work required next.
+# v0.8 : 18-07-2017 - Mostly working. Fails on duplicate account name(s) (expected). Will upload App Store apps, but error if VPP isn't working (expected). Fails on policies that create accounts (huh?).
+# v1.0 : 24-07-2017 - Upload/Download working. Archival of old data wasn't working.
 
 # Set up variables here
 export resultInt=1
-export currentver="0.8"
-export currentverdate="18th May 2017"
+export currentver="1.0"
+export currentverdate="24th May 2017"
 
 # These are the categories we're going to save and process
 declare -a jssitem
@@ -96,7 +97,7 @@ doesxmlfolderexist()
 	else
 		echo -e "\n"
 		read -p "Do you wish to archive existing xml files? (Y/N) : " archive
-		if [ "$archive" = "y" ] && [ "$archive" = "Y" ];
+		if [[ "$archive" = "y" ]] || [[ "$archive" = "Y" ]];
 		then
 			archive="YES"
 		else
@@ -111,7 +112,7 @@ doesxmlfolderexist()
 		then
 			if [ `ls -1 "$xmlloc"/"${jssitem[$loop]}"/* 2>/dev/null | wc -l` -gt 0 ];
 			then
-				echo "Archiving "${jssitem[$loop]}" xml file(s)"
+				echo "Archiving category: "${jssitem[$loop]}
 				ditto -ck "$xmlloc"/"${jssitem[$loop]}" "$xmlloc"/archives/"${jssitem[$loop]}"-$( date +%Y%m%d%H%M%S ).zip
 				rm -rf "$xmlloc/${jssitem[$loop]}"
 			fi
