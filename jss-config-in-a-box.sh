@@ -6,7 +6,7 @@
 # https://github.com/igeekjsc/JSSAPIScripts/blob/master/jssMigrationUtility.bash
 # His hard work is acknowledged and gratefully used. (and abused).
 
-# Author      : richard@richard-purves.com
+# Author : richard@richard-purves.com
 # v0.1 : 10-07-2017 - Initial Version
 # v0.2 : 15-07-2017 - Download works. Misses out empty items. Upload still fails hard.
 # v0.3 : 16-07-2017 - Upload code in test. Improvements to UI. Code simplification.
@@ -17,10 +17,11 @@
 # v0.7 : 17-07-2017 - Edging closer towards release candidate status. API code seems happier. App layout work required next.
 # v0.8 : 18-07-2017 - Mostly working. Fails on duplicate account name(s) (expected). Will upload App Store apps, but error if VPP isn't working (expected). Fails on policies that create accounts (huh?).
 # v1.0 : 24-07-2017 - Upload/Download working. Archival of old data wasn't working.
+# v1.1 : 24-07-2017 - Added multi context support for both originating and destination JSS' (blame MacMule .. it's always his fault!)
 
 # Set up variables here
 export resultInt=1
-export currentver="1.0"
+export currentver="1.1"
 export currentverdate="24th May 2017"
 
 # These are the categories we're going to save and process
@@ -152,7 +153,7 @@ grabexistingjssxml()
 	
 		# Grab all existing ID's for the current category we're processing
 		echo -e "\n\nCreating ID list for ${jssitem[$loop]} on template JSS \n"
-		curl -s -k $origjssaddress/JSSResource/${jssitem[$loop]} --user "$origjssapiuser:$origjssapipwd" | xmllint --format - > $formattedList
+		curl -s -k $origjssaddress$jssinstance/JSSResource/${jssitem[$loop]} --user "$origjssapiuser:$origjssapipwd" | xmllint --format - > $formattedList
 
 		if [ ${jssitem[$loop]} = "accounts" ];
 		then
@@ -312,7 +313,7 @@ puttonewjss()
 					do
 						let "postInt_user = $postInt_user + 1"
 						echo -e "\nPosting $xmlPost_user ( $postInt_user out of $totalParsedResourceXML_user )"
-						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$xmlPost_user" "$destjssaddress/JSSResource/accounts/userid/0" -u "$destjssapiuser:$destjssapipwd"
+						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$xmlPost_user" "$destjssaddress$jssinstance/JSSResource/accounts/userid/0" -u "$destjssapiuser:$destjssapipwd"
 					done
 
 					echo -e "\nPosting user group accounts."
@@ -324,7 +325,7 @@ puttonewjss()
 					do
 						let "postInt_group = $postInt_group + 1"
 						echo -e "\nPosting $xmlPost_group ( $postInt_group out of $totalParsedResourceXML_group )"
-						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$xmlPost_group" "$destjssaddress/JSSResource/accounts/groupid/0" -u "$destjssapiuser:$destjssapipwd"
+						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$xmlPost_group" "$destjssaddress$jssinstance/JSSResource/accounts/groupid/0" -u "$destjssapiuser:$destjssapipwd"
 					done
 				;;	
 				
@@ -338,7 +339,7 @@ puttonewjss()
 					do
 						let "postInt_static = $postInt_static + 1"
 						echo -e "\nPosting $parsedXML_static ( $postInt_static out of $totalParsedResourceXML_staticGroups )"
-						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$parsedXML_static" "$destjssaddress/JSSResource/${jssitem[$loop]}/id/0" -u "$destjssapiuser:$destjssapipwd"
+						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$parsedXML_static" "$destjssaddress$jssinstance/JSSResource/${jssitem[$loop]}/id/0" -u "$destjssapiuser:$destjssapipwd"
 					done
 
 					echo -e "\nPosting smart computer groups"
@@ -350,7 +351,7 @@ puttonewjss()
 					do
 						let "postInt_smart = $postInt_smart + 1"
 						echo -e "\nPosting $parsedXML_smart ( $postInt_smart out of $totalParsedResourceXML_smartGroups )"
-						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$parsedXML_smart" "$destjssaddress/JSSResource/${jssitem[$loop]}/id/0" -u "$destjssapiuser:$destjssapipwd"
+						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$parsedXML_smart" "$destjssaddress$jssinstance/JSSResource/${jssitem[$loop]}/id/0" -u "$destjssapiuser:$destjssapipwd"
 					done
 				;;
 		
@@ -362,7 +363,7 @@ puttonewjss()
 					do
 						let "postInt = $postInt + 1"
 						echo -e "\nPosting $parsedXML ( $postInt out of $totalParsedResourceXML )"
-						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$xmlloc/${jssitem[$loop]}/parsed_xml/$parsedXML" "$destjssaddress/JSSResource/${jssitem[$loop]}/id/0" -u "$destjssapiuser:$destjssapipwd"
+						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$xmlloc/${jssitem[$loop]}/parsed_xml/$parsedXML" "$destjssaddress$jssinstance/JSSResource/${jssitem[$loop]}/id/0" -u "$destjssapiuser:$destjssapipwd"
 					done
 				;;
 			esac		
@@ -401,6 +402,17 @@ MainMenu()
 				export origjssaddress=$jssaddress
 				export origjssapiuser=$jssapiuser
 				export origjssapipwd=$jssapipwd
+
+				# Ask which instance we need to process, check if it exists and go from there
+				echo -e "\n"
+				echo "Enter the destination JSS instance name to download"
+				read -p "(Or enter for a non-context JSS) : " jssinstance
+
+				# Check for the skip
+				if [[ $jssinstance != "" ]];
+				then
+					jssinstance="/$instance/"
+				fi
 
 				grabexistingjssxml
 			;;

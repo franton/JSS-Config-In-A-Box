@@ -21,5 +21,3 @@ You will be asked for a location to store xml data from the JSS API.
 If data already exists, then you'll be asked if you wish to archive it. Otherwise the folders will be created.
 
 You have two choices. Download or Upload. Selecting either will prompt for server details and credentials.
-
-Current limitation is it will only read from a non context JSS, but will upload to a multi context JSS.
