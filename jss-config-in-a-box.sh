@@ -7,22 +7,23 @@
 # His hard work is acknowledged and gratefully used. (and abused).
 
 # Author : richard@richard-purves.com
-# v0.1 : 10-07-2017 - Initial Version
-# v0.2 : 15-07-2017 - Download works. Misses out empty items. Upload still fails hard.
-# v0.3 : 16-07-2017 - Upload code in test. Improvements to UI. Code simplification.
-# v0.4 : 16-07-2017 - Skips empty JSS categories on download. Properly archives existing download. Choice of storage location for xml files.
-# v0.5 : 17-07-2017 - Debugged condition that "for some reason" tried to delete my entire machine. Nearly succeeded too.
+# v0.1 : 10-05-2017 - Initial Version
+# v0.2 : 15-05-2017 - Download works. Misses out empty items. Upload still fails hard.
+# v0.3 : 16-05-2017 - Upload code in test. Improvements to UI. Code simplification.
+# v0.4 : 16-05-2017 - Skips empty JSS categories on download. Properly archives existing download. Choice of storage location for xml files.
+# v0.5 : 17-05-2017 - Debugged condition that "for some reason" tried to delete my entire machine. Nearly succeeded too.
 #					- Skips empty categories now for a significant speed improvement. Upload mostly works at this point.
-# v0.6 : 17-07-2017 - Check for existing xml. Creates folders if missing, archives existing files if required. Upload fails on a few things.
-# v0.7 : 17-07-2017 - Edging closer towards release candidate status. API code seems happier. App layout work required next.
-# v0.8 : 18-07-2017 - Mostly working. Fails on duplicate account name(s) (expected). Will upload App Store apps, but error if VPP isn't working (expected). Fails on policies that create accounts (huh?).
-# v1.0 : 24-07-2017 - Upload/Download working. Archival of old data wasn't working.
-# v1.1 : 24-07-2017 - Added multi context support for both originating and destination JSS' (blame MacMule .. it's always his fault!)
+# v0.6 : 17-05-2017 - Check for existing xml. Creates folders if missing, archives existing files if required. Upload fails on a few things.
+# v0.7 : 17-05-2017 - Edging closer towards release candidate status. API code seems happier. App layout work required next.
+# v0.8 : 18-05-2017 - Mostly working. Fails on duplicate account name(s) (expected). Will upload App Store apps, but error if VPP isn't working (expected). Fails on policies that create accounts (huh?).
+# v1.0 : 24-05-2017 - Upload/Download working. Archival of old data wasn't working.
+# v1.1 : 24-05-2017 - Added multi context support for both originating and destination JSS' (blame MacMule .. it's always his fault!)
+# v1.5 : 21-07-2017 - Fixed versioning dates. Added a wipe section before upload to clear any existing config. Brute force but works.
 
 # Set up variables here
 export resultInt=1
-export currentver="1.1"
-export currentverdate="24th May 2017"
+export currentver="1.5"
+export currentverdate="21st July 2017"
 
 # These are the categories we're going to save and process
 declare -a jssitem
@@ -50,12 +51,12 @@ jssitem[20]="vppinvitations"
 jssitem[21]="webhooks"
 jssitem[22]="diskencryptionconfigurations"
 jssitem[23]="ebooks"
-jssitem[24]="computerextensionattributes" 	# Computer configuration
+jssitem[24]="computergroups" 				# Computer configuration
 jssitem[25]="dockitems"
 jssitem[26]="printers"
 jssitem[27]="licensedsoftware"
 jssitem[28]="scripts"
-jssitem[29]="computergroups"
+jssitem[29]="computerextensionattributes"
 jssitem[30]="restrictedsoftware"
 jssitem[31]="osxconfigurationprofiles"
 jssitem[32]="macapplications"
@@ -287,6 +288,70 @@ grabexistingjssxml()
 	IFS=$OIFS
 }
 
+wipejss()
+{
+	# Setting IFS Env to only use new lines as field seperator 
+	OIFS=$IFS
+	IFS=$'\n'
+	
+	# THIS IS YOUR LAST CHANCE TO PUSH THE CANCELLATION BUTTON
+
+	echo -e "\nThis action will erase the destination JSS before upload."
+	echo "Are you utterly sure you want to do this?"
+	read -p "(Default is NO. Type YES to go ahead) : " arewesure
+
+	# Check for the skip
+	if [[ $arewesure != "YES" ]];
+	then
+		echo "Ok, quitting."
+		exit 0
+	fi
+
+	# OK DO IT
+
+	for (( loop=0; loop<${#jssitem[@]}; loop++ ))
+	do
+		if [ ${jssitem[$loop]} = "accounts" ];
+		then
+			echo -e "\nSkipping ${jssitem[$loop]} category. Or we can't get back in!"
+		else
+			# Set our result incremental variable to 1
+			export resultInt=1
+
+			# Grab all existing ID's for the current category we're processing
+			echo -e "\n\nProcessing ID list for ${jssitem[$loop]}\n"
+			curl -s -k --user "$jssapiuser:$jssapipwd" $jssaddress$jssinstance/JSSResource/${jssitem[$loop]} | xmllint --format - > /tmp/unprocessedid
+
+			# Check if any ids have been captured. Skip if none present.
+			check=$( echo /tmp/unprocessedid | grep "<size>0</size>" | wc -l | awk '{ print $1 }' )
+
+			if [ "$check" = "0" ];
+			then
+				# What are we deleting?
+				echo -e "\nDeleting ${jssitem[$loop]}"
+	
+				# Process all the item id numbers
+				cat /tmp/unprocessedid | awk -F'<id>|</id>' '/<id>/ {print $2}' > /tmp/processedid
+
+				# Delete all the item id numbers
+				totalFetchedIDs=$( cat /tmp/processedid | wc -l | sed -e 's/^[ \t]*//' )
+	
+				for apiID in $(cat /tmp/processedid)
+				do
+					echo "Deleting ID number $apiID ( $resultInt out of $totalFetchedIDs )"
+					curl -s -k --user "$jssapiuser:$jssapipwd" -H "Content-Type: application/xml" -X DELETE "$jssaddress$jssinstance/JSSResource/${jssitem[$loop]}/id/$apiID"
+					resultInt=$(($resultInt + 1))
+				done	
+			else
+				echo -e "\nCategory ${jssitem[$loop]} is empty. Skipping."
+			fi
+		fi
+	done
+	
+	# Setting IFS back to default 
+	IFS=$OIFS
+}
+
 puttonewjss()
 {
 	# Setting IFS Env to only use new lines as field seperator 
@@ -436,6 +501,7 @@ MainMenu()
 					jssinstance="/$instance/"
 				fi
 
+				wipejss
 				puttonewjss				
 			;;
 			q)
