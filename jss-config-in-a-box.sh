@@ -19,64 +19,118 @@
 # v1.0 : 24-05-2017 - Upload/Download working. Archival of old data wasn't working.
 # v1.1 : 24-05-2017 - Added multi context support for both originating and destination JSS' (blame MacMule .. it's always his fault!)
 # v1.5 : 21-07-2017 - Fixed versioning dates. Added a wipe section before upload to clear any existing config. Brute force but works.
+# v1.6 : 31-07-2017 - Found the order to read things out is different to writing them back. So 2nd array goes in to fix.
 
 # Set up variables here
 export resultInt=1
 export currentver="1.5"
 export currentverdate="21st July 2017"
 
-# These are the categories we're going to save and process
-declare -a jssitem
-jssitem[0]="sites"							# Backend configuration
-jssitem[1]="categories"
-jssitem[2]="ldapservers"
-jssitem[3]="accounts"
-jssitem[4]="buildings"
-jssitem[5]="departments"
-jssitem[6]="directorybindings"
-jssitem[7]="removablemacaddresses"
-jssitem[8]="netbootservers"
-jssitem[9]="distributionpoints"
-jssitem[10]="softwareupdateservers"
-jssitem[11]="networksegments"
-jssitem[12]="healthcarelistener"
-jssitem[13]="ibeacons"
-jssitem[14]="infrastructuremanager"
-jssitem[15]="peripherals"
-jssitem[16]="peripheraltypes"
-jssitem[17]="smtpserver"
-jssitem[18]="vppaccounts"
-jssitem[19]="vppassignments"
-jssitem[20]="vppinvitations"
-jssitem[21]="webhooks"
-jssitem[22]="diskencryptionconfigurations"
-jssitem[23]="ebooks"
-jssitem[24]="computergroups" 				# Computer configuration
-jssitem[25]="dockitems"
-jssitem[26]="printers"
-jssitem[27]="licensedsoftware"
-jssitem[28]="scripts"
-jssitem[29]="computerextensionattributes"
-jssitem[30]="restrictedsoftware"
-jssitem[31]="osxconfigurationprofiles"
-jssitem[32]="macapplications"
-jssitem[33]="managedpreferenceprofiles"
-jssitem[34]="packages"
-jssitem[35]="policies"
-jssitem[36]="advancedcomputersearches"
-jssitem[37]="patches"
-jssitem[38]="mobiledevicegroups"			# Mobile configuration
-jssitem[39]="mobiledeviceapplications"
-jssitem[40]="mobiledeviceconfigurationprofiles"
-jssitem[41]="mobiledeviceenrollmentprofiles"
-jssitem[42]="mobiledeviceextensionattributes"
-jssitem[43]="mobiledeviceprovisioningprofiles"
-jssitem[44]="classes"
-jssitem[45]="advancedmobiledevicesearches"
-jssitem[46]="userextensionattributes"		# User configuration
-jssitem[47]="usergroups"
-jssitem[48]="users"
-jssitem[49]="advancedusersearches"
+# These are the categories we're going to save or wipe
+declare -a readwipe
+readwipe[0]="sites"							# Backend configuration
+readwipe[1]="categories"
+readwipe[2]="ldapservers"
+readwipe[3]="accounts"
+readwipe[4]="buildings"
+readwipe[5]="departments"
+readwipe[6]="directorybindings"
+readwipe[7]="removablemacaddresses"
+readwipe[8]="netbootservers"
+readwipe[9]="distributionpoints"
+readwipe[10]="softwareupdateservers"
+readwipe[11]="networksegments"
+readwipe[12]="healthcarelistener"
+readwipe[13]="ibeacons"
+readwipe[14]="infrastructuremanager"
+readwipe[15]="peripherals"
+readwipe[16]="peripheraltypes"
+readwipe[17]="smtpserver"
+readwipe[18]="vppaccounts"
+readwipe[19]="vppassignments"
+readwipe[20]="vppinvitations"
+readwipe[21]="webhooks"
+readwipe[22]="diskencryptionconfigurations"
+readwipe[23]="ebooks"
+readwipe[24]="computergroups" 				# Computer configuration
+readwipe[25]="dockitems"
+readwipe[26]="printers"
+readwipe[27]="licensedsoftware"
+readwipe[28]="scripts"
+readwipe[29]="computerextensionattributes"
+readwipe[30]="restrictedsoftware"
+readwipe[31]="osxconfigurationprofiles"
+readwipe[32]="macapplications"
+readwipe[33]="managedpreferenceprofiles"
+readwipe[34]="packages"
+readwipe[35]="policies"
+readwipe[36]="advancedcomputersearches"
+readwipe[37]="patches"
+readwipe[38]="mobiledevicegroups"			# Mobile configuration
+readwipe[39]="mobiledeviceapplications"
+readwipe[40]="mobiledeviceconfigurationprofiles"
+readwipe[41]="mobiledeviceenrollmentprofiles"
+readwipe[42]="mobiledeviceextensionattributes"
+readwipe[43]="mobiledeviceprovisioningprofiles"
+readwipe[44]="classes"
+readwipe[45]="advancedmobiledevicesearches"
+readwipe[46]="userextensionattributes"		# User configuration
+readwipe[47]="usergroups"
+readwipe[48]="users"
+readwipe[49]="advancedusersearches"
+
+# These are the categories we're going to upload. Ordering is different from read/wipe.
+declare -a writebk
+writebk[0]="sites"							# Backend configuration
+writebk[1]="categories"
+writebk[2]="ldapservers"
+writebk[3]="accounts"
+writebk[4]="buildings"
+writebk[5]="departments"
+writebk[6]="directorybindings"
+writebk[7]="removablemacaddresses"
+writebk[8]="netbootservers"
+writebk[9]="distributionpoints"
+writebk[10]="softwareupdateservers"
+writebk[11]="networksegments"
+writebk[12]="healthcarelistener"
+writebk[13]="ibeacons"
+writebk[14]="infrastructuremanager"
+writebk[15]="peripherals"
+writebk[16]="peripheraltypes"
+writebk[17]="smtpserver"
+writebk[18]="vppaccounts"
+writebk[19]="vppassignments"
+writebk[20]="vppinvitations"
+writebk[21]="webhooks"
+writebk[22]="diskencryptionconfigurations"
+writebk[23]="ebooks"
+writebk[24]="computerextensionattributes" 		# Computer configuration
+writebk[25]="dockitems"
+writebk[26]="printers"
+writebk[27]="licensedsoftware"
+writebk[28]="scripts"
+writebk[29]="computergroups"
+writebk[30]="restrictedsoftware"
+writebk[31]="osxconfigurationprofiles"
+writebk[32]="macapplications"
+writebk[33]="managedpreferenceprofiles"
+writebk[34]="packages"
+writebk[35]="policies"
+writebk[36]="advancedcomputersearches"
+writebk[37]="patches"
+writebk[38]="mobiledeviceextensionattributes"		# Mobile configuration
+writebk[39]="mobiledeviceapplications"
+writebk[40]="mobiledeviceconfigurationprofiles"
+writebk[41]="mobiledeviceenrollmentprofiles"
+writebk[42]="mobiledevicegroups"
+writebk[43]="mobiledeviceprovisioningprofiles"
+writebk[44]="classes"
+writebk[45]="advancedmobiledevicesearches"
+writebk[46]="userextensionattributes"				# User configuration
+writebk[47]="usergroups"
+writebk[48]="users"
+writebk[49]="advancedusersearches"
 
 # Start functions here
 doesxmlfolderexist()
@@ -108,25 +162,25 @@ doesxmlfolderexist()
 	fi
 	
 	# Check for existing items, archiving if necessary.
-	for (( loop=0; loop<${#jssitem[@]}; loop++ ))
+	for (( loop=0; loop<${#readwipe[@]}; loop++ ))
 	do
 		if [ "$archive" = "YES" ];
 		then
-			if [ `ls -1 "$xmlloc"/"${jssitem[$loop]}"/* 2>/dev/null | wc -l` -gt 0 ];
+			if [ `ls -1 "$xmlloc"/"${readwipe[$loop]}"/* 2>/dev/null | wc -l` -gt 0 ];
 			then
-				echo "Archiving category: "${jssitem[$loop]}
-				ditto -ck "$xmlloc"/"${jssitem[$loop]}" "$xmlloc"/archives/"${jssitem[$loop]}"-$( date +%Y%m%d%H%M%S ).zip
-				rm -rf "$xmlloc/${jssitem[$loop]}"
+				echo "Archiving category: "${readwipe[$loop]}
+				ditto -ck "$xmlloc"/"${readwipe[$loop]}" "$xmlloc"/archives/"${readwipe[$loop]}"-$( date +%Y%m%d%H%M%S ).zip
+				rm -rf "$xmlloc/${readwipe[$loop]}"
 			fi
 		fi
 
 	# Check and create the JSS xml resource folders if missing.
-		if [ ! -f "$xmlloc/${jssitem[$loop]}" ];
+		if [ ! -f "$xmlloc/${readwipe[$loop]}" ];
 		then
-			mkdir -p "$xmlloc/${jssitem[$loop]}"
-			mkdir -p "$xmlloc/${jssitem[$loop]}/id_list"
-			mkdir -p "$xmlloc/${jssitem[$loop]}/fetched_xml"
-			mkdir -p "$xmlloc/${jssitem[$loop]}/parsed_xml"
+			mkdir -p "$xmlloc/${readwipe[$loop]}"
+			mkdir -p "$xmlloc/${readwipe[$loop]}/id_list"
+			mkdir -p "$xmlloc/${readwipe[$loop]}/fetched_xml"
+			mkdir -p "$xmlloc/${readwipe[$loop]}/parsed_xml"
 		fi
 	done
 }
@@ -138,25 +192,25 @@ grabexistingjssxml()
 	IFS=$'\n'
 
 	# Loop around the array of JSS categories we set up earlier.
-	for (( loop=0; loop<${#jssitem[@]}; loop++ ))
+	for (( loop=0; loop<${#readwipe[@]}; loop++ ))
 	do	
 		# Set our result incremental variable to 1
 		export resultInt=1
 
 		# Work out where things are going to be stored on this loop
-		export formattedList=$xmlloc/${jssitem[$loop]}/id_list/formattedList.xml
-		export plainList=$xmlloc/${jssitem[$loop]}/id_list/plainList
-		export plainListAccountsUsers=$xmlloc/${jssitem[$loop]}/id_list/plainListAccountsUsers
-		export plainListAccountsGroups=$xmlloc/${jssitem[$loop]}/id_list/plainListAccountsGroups
-		export fetchedResult=$xmlloc/${jssitem[$loop]}/fetched_xml/result"$resultInt".xml
-		export fetchedResultAccountsUsers=$xmlloc/${jssitem[$loop]}/fetched_xml/userResult"$resultInt".xml
-		export fetchedResultAccountsGroups=$xmlloc/${jssitem[$loop]}/fetched_xml/groupResult"$resultInt".xml	
+		export formattedList=$xmlloc/${readwipe[$loop]}/id_list/formattedList.xml
+		export plainList=$xmlloc/${readwipe[$loop]}/id_list/plainList
+		export plainListAccountsUsers=$xmlloc/${readwipe[$loop]}/id_list/plainListAccountsUsers
+		export plainListAccountsGroups=$xmlloc/${readwipe[$loop]}/id_list/plainListAccountsGroups
+		export fetchedResult=$xmlloc/${readwipe[$loop]}/fetched_xml/result"$resultInt".xml
+		export fetchedResultAccountsUsers=$xmlloc/${readwipe[$loop]}/fetched_xml/userResult"$resultInt".xml
+		export fetchedResultAccountsGroups=$xmlloc/${readwipe[$loop]}/fetched_xml/groupResult"$resultInt".xml	
 	
 		# Grab all existing ID's for the current category we're processing
-		echo -e "\n\nCreating ID list for ${jssitem[$loop]} on template JSS \n"
-		curl -s -k $origjssaddress$jssinstance/JSSResource/${jssitem[$loop]} --user "$origjssapiuser:$origjssapipwd" | xmllint --format - > $formattedList
+		echo -e "\n\nCreating ID list for ${readwipe[$loop]} on template JSS \n"
+		curl -s -k $origjssaddress$jssinstance/JSSResource/${readwipe[$loop]} --user "$origjssapiuser:$origjssapipwd" | xmllint --format - > $formattedList
 
-		if [ ${jssitem[$loop]} = "accounts" ];
+		if [ ${readwipe[$loop]} = "accounts" ];
 		then
 			if [ `cat "$formattedList" | grep "<users/>" | wc -l | awk '{ print $1 }'` = "0" ];
 			then
@@ -176,7 +230,7 @@ grabexistingjssxml()
 		else
 			if [ `cat "$formattedList" | grep "<size>0" | wc -l | awk '{ print $1 }'` = "0" ];
 			then
-				echo -e "\n\nCreating a plain list of ${jssitem[$loop]} ID's \n"
+				echo -e "\n\nCreating a plain list of ${readwipe[$loop]} ID's \n"
 				cat $formattedList |awk -F'<id>|</id>' '/<id>/ {print $2}' > $plainList
 			else
 				rm $formattedList
@@ -184,20 +238,20 @@ grabexistingjssxml()
 		fi
 
 		# Work out how many ID's are present IF formattedlist is present. Grab and download each one for the specific search we're doing. Special code for accounts because the API is annoyingly different from the rest.
-		if [ `ls -1 "$xmlloc/${jssitem[$loop]}/id_list"/* 2>/dev/null | wc -l` -gt 0 ];
+		if [ `ls -1 "$xmlloc/${readwipe[$loop]}/id_list"/* 2>/dev/null | wc -l` -gt 0 ];
 		then
-			case "${jssitem[$loop]}" in
+			case "${readwipe[$loop]}" in
 				accounts)
 					totalFetchedIDsUsers=$( cat "$plainListAccountsUsers" | wc -l | sed -e 's/^[ \t]*//' )
 					for userID in $( cat $plainListAccountsUsers )
 					do
 						echo "Downloading User ID number $userID ( $resultInt out of $totalFetchedIDsUsers )"
-						fetchedResultAccountsUsers=$( curl --silent -k --user "$origjssapiuser:$origjssapipwd" -H "Content-Type: application/xml" -X GET "$origjssaddress/JSSResource/${jssitem[$loop]}/userid/$userID" | xmllint --format - )
+						fetchedResultAccountsUsers=$( curl --silent -k --user "$origjssapiuser:$origjssapipwd" -H "Content-Type: application/xml" -X GET "$origjssaddress/JSSResource/${readwipe[$loop]}/userid/$userID" | xmllint --format - )
 						itemID=$( echo "$fetchedResultAccountsUsers" | grep "<id>" | awk -F '<id>|</id>' '{ print $2; exit; }')
 						itemName=$( echo "$fetchedResultAccountsUsers" | grep "<name>" | awk -F '<name>|</name>' '{ print $2; exit; }')
 						cleanedName=$( echo "$itemName" | sed 's/[:\/\\]//g' )
 						fileName="$cleanedName [ID $itemID]"
-						echo "$fetchedResultAccountsUsers" > $xmlloc/${jssitem[$loop]}/fetched_xml/user_"$resultInt.xml"
+						echo "$fetchedResultAccountsUsers" > $xmlloc/${readwipe[$loop]}/fetched_xml/user_"$resultInt.xml"
 					
 						let "resultInt = $resultInt + 1"
 					done
@@ -208,12 +262,12 @@ grabexistingjssxml()
 					for groupID in $( cat $plainListAccountsGroups )
 					do
 						echo "Downloading Group ID number $groupID ( $resultInt out of $totalFetchedIDsGroups )"
-						fetchedResultAccountsGroups=$( curl --silent -k --user "$origjssapiuser:$origjssapipwd" -H "Content-Type: application/xml" -X GET "$origjssaddress/JSSResource/${jssitem[$loop]}/groupid/$groupID" | xmllint --format - )
+						fetchedResultAccountsGroups=$( curl --silent -k --user "$origjssapiuser:$origjssapipwd" -H "Content-Type: application/xml" -X GET "$origjssaddress/JSSResource/${readwipe[$loop]}/groupid/$groupID" | xmllint --format - )
 						itemID=$( echo "$fetchedResultAccountsGroups" | grep "<id>" | awk -F '<id>|</id>' '{ print $2; exit; }')
 						itemName=$( echo "$fetchedResultAccountsGroups" | grep "<name>" | awk -F '<name>|</name>' '{ print $2; exit; }')
 						cleanedName=$( echo "$itemName" | sed 's/[:\/\\]//g' )
 						fileName="$cleanedName [ID $itemID]"
-						echo "$fetchedResultAccountsGroups" > $xmlloc/${jssitem[$loop]}/fetched_xml/group_"$resultInt.xml"
+						echo "$fetchedResultAccountsGroups" > $xmlloc/${readwipe[$loop]}/fetched_xml/group_"$resultInt.xml"
 					
 						let "resultInt = $resultInt + 1"
 					done			
@@ -225,62 +279,62 @@ grabexistingjssxml()
 					for apiID in $(cat $plainList)
 					do
 						echo "Downloading ID number $apiID ( $resultInt out of $totalFetchedIDs )"
-						curl -s -k --user "$origjssapiuser:$origjssapipwd" -H "Content-Type: application/xml" -X GET "$origjssaddress/JSSResource/${jssitem[$loop]}/id/$apiID" | xmllint --format - > $fetchedResult
+						curl -s -k --user "$origjssapiuser:$origjssapipwd" -H "Content-Type: application/xml" -X GET "$origjssaddress/JSSResource/${readwipe[$loop]}/id/$apiID" | xmllint --format - > $fetchedResult
 						resultInt=$(($resultInt + 1))
-						fetchedResult=$xmlloc/${jssitem[$loop]}/fetched_xml/result"$resultInt".xml
+						fetchedResult=$xmlloc/${readwipe[$loop]}/fetched_xml/result"$resultInt".xml
 					done	
 				;;
 			esac
 			
 			# Depending which category we're dealing with, parse the grabbed files into something we can upload later.
-			case "${jssitem[$loop]}" in	
+			case "${readwipe[$loop]}" in	
 				computergroups)
 					echo -e "\nParsing JSS computer groups"
 
-					for resourceXML in $(ls $xmlloc/${jssitem[$loop]}/fetched_xml)
+					for resourceXML in $(ls $xmlloc/${readwipe[$loop]}/fetched_xml)
 					do
 						echo "Parsing computer group: $resourceXML"
 
-						if [[ `cat $xmlloc/${jssitem[$loop]}/fetched_xml/$resourceXML | grep "<is_smart>false</is_smart>"` ]]
+						if [[ `cat $xmlloc/${readwipe[$loop]}/fetched_xml/$resourceXML | grep "<is_smart>false</is_smart>"` ]]
 						then
 							echo "$resourceXML is a static computer group"
-							cat $xmlloc/${jssitem[$loop]}/fetched_xml/$resourceXML | grep -v "<id>" | sed '/<computers>/,/<\/computers/d' > $xmlloc/${jssitem[$loop]}/parsed_xml/static_group_parsed_"$resourceXML"
+							cat $xmlloc/${readwipe[$loop]}/fetched_xml/$resourceXML | grep -v "<id>" | sed '/<computers>/,/<\/computers/d' > $xmlloc/${readwipe[$loop]}/parsed_xml/static_group_parsed_"$resourceXML"
 						else
 							echo "$resourceXML is a smart computer group..."
-							cat $xmlloc/${jssitem[$loop]}/fetched_xml/$resourceXML | grep -v "<id>" | sed '/<computers>/,/<\/computers/d' > $xmlloc/${jssitem[$loop]}/parsed_xml/smart_group_parsed_"$resourceXML"
+							cat $xmlloc/${readwipe[$loop]}/fetched_xml/$resourceXML | grep -v "<id>" | sed '/<computers>/,/<\/computers/d' > $xmlloc/${readwipe[$loop]}/parsed_xml/smart_group_parsed_"$resourceXML"
 						fi					
 					done
 				;;
 
 				policies|restrictedsoftware)
-					echo -e "\nParsing ${jssitem[$loop]}"
+					echo -e "\nParsing ${readwipe[$loop]}"
 
-					for resourceXML in $(ls $xmlloc/${jssitem[$loop]}/fetched_xml)
+					for resourceXML in $(ls $xmlloc/${readwipe[$loop]}/fetched_xml)
 					do
 						echo "Parsing policy: $resourceXML"
 			
-						if [[ `cat $xmlloc/${jssitem[$loop]}/fetched_xml/$resourceXML | grep "<name>No category assigned</name>"` ]]
+						if [[ `cat $xmlloc/${readwipe[$loop]}/fetched_xml/$resourceXML | grep "<name>No category assigned</name>"` ]]
 						then
 							echo "Policy $resourceXML is not assigned to a category. Ignoring."
 						else
 							echo "Processing policy file $resourceXML ."
-							cat $xmlloc/${jssitem[$loop]}/fetched_xml/$resourceXML | grep -v "<id>" | sed '/<computers>/,/<\/computers>/d' | sed '/<self_service_icon>/,/<\/self_service_icon>/d' | sed '/<limit_to_users>/,/<\/limit_to_users>/d' | sed '/<users>/,/<\/users>/d' | sed '/<user_groups>/,/<\/user_groups>/d' > $xmlloc/${jssitem[$loop]}/parsed_xml/parsed_"$resourceXML"
+							cat $xmlloc/${readwipe[$loop]}/fetched_xml/$resourceXML | grep -v "<id>" | sed '/<computers>/,/<\/computers>/d' | sed '/<self_service_icon>/,/<\/self_service_icon>/d' | sed '/<limit_to_users>/,/<\/limit_to_users>/d' | sed '/<users>/,/<\/users>/d' | sed '/<user_groups>/,/<\/user_groups>/d' > $xmlloc/${readwipe[$loop]}/parsed_xml/parsed_"$resourceXML"
 						fi
 					done
 				;;
 
 				*)
-					echo -e "\nNo special parsing needed for: ${jssitem[$loop]}. Removing references to ID's\n"
+					echo -e "\nNo special parsing needed for: ${readwipe[$loop]}. Removing references to ID's\n"
 
-					for resourceXML in $(ls $xmlloc/${jssitem[$loop]}/fetched_xml)
+					for resourceXML in $(ls $xmlloc/${readwipe[$loop]}/fetched_xml)
 					do
 						echo "Parsing $resourceXML"
-						cat $xmlloc/${jssitem[$loop]}/fetched_xml/$resourceXML | grep -v "<id>" > $xmlloc/${jssitem[$loop]}/parsed_xml/parsed_"$resourceXML"
+						cat $xmlloc/${readwipe[$loop]}/fetched_xml/$resourceXML | grep -v "<id>" > $xmlloc/${readwipe[$loop]}/parsed_xml/parsed_"$resourceXML"
 					done
 				;;
 			esac
 		else
-			echo -e "\nResource ${jssitem[$loop]} empty. Skipping."
+			echo -e "\nResource ${readwipe[$loop]} empty. Skipping."
 		fi
 	done
 	
@@ -309,18 +363,18 @@ wipejss()
 
 	# OK DO IT
 
-	for (( loop=0; loop<${#jssitem[@]}; loop++ ))
+	for (( loop=0; loop<${#readwipe[@]}; loop++ ))
 	do
-		if [ ${jssitem[$loop]} = "accounts" ];
+		if [ ${readwipe[$loop]} = "accounts" ];
 		then
-			echo -e "\nSkipping ${jssitem[$loop]} category. Or we can't get back in!"
+			echo -e "\nSkipping ${readwipe[$loop]} category. Or we can't get back in!"
 		else
 			# Set our result incremental variable to 1
 			export resultInt=1
 
 			# Grab all existing ID's for the current category we're processing
-			echo -e "\n\nProcessing ID list for ${jssitem[$loop]}\n"
-			curl -s -k --user "$jssapiuser:$jssapipwd" $jssaddress$jssinstance/JSSResource/${jssitem[$loop]} | xmllint --format - > /tmp/unprocessedid
+			echo -e "\n\nProcessing ID list for ${readwipe[$loop]}\n"
+			curl -s -k --user "$jssapiuser:$jssapipwd" $jssaddress$jssinstance/JSSResource/${readwipe[$loop]} | xmllint --format - > /tmp/unprocessedid
 
 			# Check if any ids have been captured. Skip if none present.
 			check=$( echo /tmp/unprocessedid | grep "<size>0</size>" | wc -l | awk '{ print $1 }' )
@@ -328,7 +382,7 @@ wipejss()
 			if [ "$check" = "0" ];
 			then
 				# What are we deleting?
-				echo -e "\nDeleting ${jssitem[$loop]}"
+				echo -e "\nDeleting ${readwipe[$loop]}"
 	
 				# Process all the item id numbers
 				cat /tmp/unprocessedid | awk -F'<id>|</id>' '/<id>/ {print $2}' > /tmp/processedid
@@ -339,11 +393,11 @@ wipejss()
 				for apiID in $(cat /tmp/processedid)
 				do
 					echo "Deleting ID number $apiID ( $resultInt out of $totalFetchedIDs )"
-					curl -s -k --user "$jssapiuser:$jssapipwd" -H "Content-Type: application/xml" -X DELETE "$jssaddress$jssinstance/JSSResource/${jssitem[$loop]}/id/$apiID"
+					curl -s -k --user "$jssapiuser:$jssapipwd" -H "Content-Type: application/xml" -X DELETE "$jssaddress$jssinstance/JSSResource/${readwipe[$loop]}/id/$apiID"
 					resultInt=$(($resultInt + 1))
 				done	
 			else
-				echo -e "\nCategory ${jssitem[$loop]} is empty. Skipping."
+				echo -e "\nCategory ${readwipe[$loop]} is empty. Skipping."
 			fi
 		fi
 	done
@@ -358,23 +412,23 @@ puttonewjss()
 	OIFS=$IFS
 	IFS=$'\n'
 
-	for (( loop=0; loop<${#jssitem[@]}; loop++ ))
+	for (( loop=0; loop<${#writebk[@]}; loop++ ))
 	do
-		if [ `ls -1 "$xmlloc"/"${jssitem[$loop]}"/parsed_xml/* 2>/dev/null | wc -l` -gt 0 ];
+		if [ `ls -1 "$xmlloc"/"${writebk[$loop]}"/parsed_xml/* 2>/dev/null | wc -l` -gt 0 ];
 		then
 			# Set our result incremental variable to 1
 			export resultInt=1
 
-			echo -e "\n\nPosting ${jssitem[$loop]} to new JSS instance: $destjssaddress$jssinstance"
+			echo -e "\n\nPosting ${writebk[$loop]} to new JSS instance: $destjssaddress$jssinstance"
 		
-			case "${jssitem[$loop]}" in
+			case "${writebk[$loop]}" in
 				accounts)
 					echo -e "\nPosting user accounts."
 
-					totalParsedResourceXML_user=$( ls $xmlloc/${jssitem[$loop]}/parsed_xml/*user* | wc -l | sed -e 's/^[ \t]*//' )
+					totalParsedResourceXML_user=$( ls $xmlloc/${writebk[$loop]}/parsed_xml/*user* | wc -l | sed -e 's/^[ \t]*//' )
 					postInt_user=0	
 
-					for xmlPost_user in $(ls -1 $xmlloc/${jssitem[$loop]}/parsed_xml/*user*)
+					for xmlPost_user in $(ls -1 $xmlloc/${writebk[$loop]}/parsed_xml/*user*)
 					do
 						let "postInt_user = $postInt_user + 1"
 						echo -e "\nPosting $xmlPost_user ( $postInt_user out of $totalParsedResourceXML_user )"
@@ -383,10 +437,10 @@ puttonewjss()
 
 					echo -e "\nPosting user group accounts."
 
-					totalParsedResourceXML_group=$( ls $xmlloc/${jssitem[$loop]}/parsed_xml/*group* | wc -l | sed -e 's/^[ \t]*//' )
+					totalParsedResourceXML_group=$( ls $xmlloc/${writebk[$loop]}/parsed_xml/*group* | wc -l | sed -e 's/^[ \t]*//' )
 					postInt_group=0	
 
-					for xmlPost_group in $(ls -1 $xmlloc/${jssitem[$loop]}/parsed_xml/*group*)
+					for xmlPost_group in $(ls -1 $xmlloc/${writebk[$loop]}/parsed_xml/*group*)
 					do
 						let "postInt_group = $postInt_group + 1"
 						echo -e "\nPosting $xmlPost_group ( $postInt_group out of $totalParsedResourceXML_group )"
@@ -397,43 +451,43 @@ puttonewjss()
 				computergroups)
 					echo -e "\nPosting static computer groups."
 
-					totalParsedResourceXML_staticGroups=$(ls $xmlloc/${jssitem[$loop]}/parsed_xml/static_group_parsed* | wc -l | sed -e 's/^[ \t]*//')
+					totalParsedResourceXML_staticGroups=$(ls $xmlloc/${writebk[$loop]}/parsed_xml/static_group_parsed* | wc -l | sed -e 's/^[ \t]*//')
 					postInt_static=0
 
-					for parsedXML_static in $(ls -1 $xmlloc/${jssitem[$loop]}/parsed_xml/static_group_parsed*)
+					for parsedXML_static in $(ls -1 $xmlloc/${writebk[$loop]}/parsed_xml/static_group_parsed*)
 					do
 						let "postInt_static = $postInt_static + 1"
 						echo -e "\nPosting $parsedXML_static ( $postInt_static out of $totalParsedResourceXML_staticGroups )"
-						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$parsedXML_static" "$destjssaddress$jssinstance/JSSResource/${jssitem[$loop]}/id/0" -u "$destjssapiuser:$destjssapipwd"
+						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$parsedXML_static" "$destjssaddress$jssinstance/JSSResource/${writebk[$loop]}/id/0" -u "$destjssapiuser:$destjssapipwd"
 					done
 
 					echo -e "\nPosting smart computer groups"
 
-					totalParsedResourceXML_smartGroups=$(ls $xmlloc/${jssitem[$loop]}/parsed_xml/smart_group_parsed* | wc -l | sed -e 's/^[ \t]*//')
+					totalParsedResourceXML_smartGroups=$(ls $xmlloc/${writebk[$loop]}/parsed_xml/smart_group_parsed* | wc -l | sed -e 's/^[ \t]*//')
 					postInt_smart=0	
 
-					for parsedXML_smart in $(ls -1 $xmlloc/${jssitem[$loop]}/parsed_xml/smart_group_parsed*)
+					for parsedXML_smart in $(ls -1 $xmlloc/${writebk[$loop]}/parsed_xml/smart_group_parsed*)
 					do
 						let "postInt_smart = $postInt_smart + 1"
 						echo -e "\nPosting $parsedXML_smart ( $postInt_smart out of $totalParsedResourceXML_smartGroups )"
-						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$parsedXML_smart" "$destjssaddress$jssinstance/JSSResource/${jssitem[$loop]}/id/0" -u "$destjssapiuser:$destjssapipwd"
+						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$parsedXML_smart" "$destjssaddress$jssinstance/JSSResource/${writebk[$loop]}/id/0" -u "$destjssapiuser:$destjssapipwd"
 					done
 				;;
 		
 				*)
-					totalParsedResourceXML=$(ls $xmlloc/${jssitem[$loop]}/parsed_xml | wc -l | sed -e 's/^[ \t]*//')
+					totalParsedResourceXML=$(ls $xmlloc/${writebk[$loop]}/parsed_xml | wc -l | sed -e 's/^[ \t]*//')
 					postInt=0	
 
-					for parsedXML in $(ls $xmlloc/${jssitem[$loop]}/parsed_xml)
+					for parsedXML in $(ls $xmlloc/${writebk[$loop]}/parsed_xml)
 					do
 						let "postInt = $postInt + 1"
 						echo -e "\nPosting $parsedXML ( $postInt out of $totalParsedResourceXML )"
-						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$xmlloc/${jssitem[$loop]}/parsed_xml/$parsedXML" "$destjssaddress$jssinstance/JSSResource/${jssitem[$loop]}/id/0" -u "$destjssapiuser:$destjssapipwd"
+						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$xmlloc/${writebk[$loop]}/parsed_xml/$parsedXML" "$destjssaddress$jssinstance/JSSResource/${writebk[$loop]}/id/0" -u "$destjssapiuser:$destjssapipwd"
 					done
 				;;
 			esac		
 		else
-			echo -e "\nResource ${jssitem[$loop]} empty. Skipping."
+			echo -e "\nResource ${writebk[$loop]} empty. Skipping."
 		fi
 	done
 
