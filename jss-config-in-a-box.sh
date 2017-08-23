@@ -20,11 +20,12 @@
 # v1.1 : 24-05-2017 - Added multi context support for both originating and destination JSS' (blame MacMule .. it's always his fault!)
 # v1.5 : 21-07-2017 - Fixed versioning dates. Added a wipe section before upload to clear any existing config. Brute force but works.
 # v1.6 : 31-07-2017 - Found the order to read things out is different to writing them back. So 2nd array goes in to fix.
+# v1.7 : 23-08-2017 - Explicitly specifying xml to the JSS seems to help a little with certain edge cases.
 
 # Set up variables here
 export resultInt=1
-export currentver="1.5"
-export currentverdate="21st July 2017"
+export currentver="1.7"
+export currentverdate="23rd August 2017"
 
 # These are the categories we're going to save or wipe
 declare -a readwipe
@@ -374,7 +375,7 @@ wipejss()
 
 			# Grab all existing ID's for the current category we're processing
 			echo -e "\n\nProcessing ID list for ${readwipe[$loop]}\n"
-			curl -s -k --user "$jssapiuser:$jssapipwd" $jssaddress$jssinstance/JSSResource/${readwipe[$loop]} | xmllint --format - > /tmp/unprocessedid
+			curl -s -k --user "$jssapiuser:$jssapipwd" -H "Accept: application/xml" $jssaddress$jssinstance/JSSResource/${readwipe[$loop]} | xmllint --format - > /tmp/unprocessedid
 
 			# Check if any ids have been captured. Skip if none present.
 			check=$( echo /tmp/unprocessedid | grep "<size>0</size>" | wc -l | awk '{ print $1 }' )
@@ -389,7 +390,7 @@ wipejss()
 
 				# Delete all the item id numbers
 				totalFetchedIDs=$( cat /tmp/processedid | wc -l | sed -e 's/^[ \t]*//' )
-	
+
 				for apiID in $(cat /tmp/processedid)
 				do
 					echo "Deleting ID number $apiID ( $resultInt out of $totalFetchedIDs )"
