@@ -21,11 +21,12 @@
 # v1.5 : 21-07-2017 - Fixed versioning dates. Added a wipe section before upload to clear any existing config. Brute force but works.
 # v1.6 : 31-07-2017 - Found the order to read things out is different to writing them back. So 2nd array goes in to fix.
 # v1.7 : 23-08-2017 - Explicitly specifying xml to the JSS seems to help a little with certain edge cases.
+# v1.8 : 30-08-2017 - Enforces xml use with the JSS API. Different java installs default to JSON.
 
 # Set up variables here
 export resultInt=1
-export currentver="1.7"
-export currentverdate="23rd August 2017"
+export currentver="1.8"
+export currentverdate="30th August 2017"
 
 # These are the categories we're going to save or wipe
 declare -a readwipe
@@ -209,7 +210,7 @@ grabexistingjssxml()
 	
 		# Grab all existing ID's for the current category we're processing
 		echo -e "\n\nCreating ID list for ${readwipe[$loop]} on template JSS \n"
-		curl -s -k $origjssaddress$jssinstance/JSSResource/${readwipe[$loop]} --user "$origjssapiuser:$origjssapipwd" | xmllint --format - > $formattedList
+		curl -s -k $origjssaddress$jssinstance/JSSResource/${readwipe[$loop]} -H "Accept: application/xml" --user "$origjssapiuser:$origjssapipwd" | xmllint --format - > $formattedList
 
 		if [ ${readwipe[$loop]} = "accounts" ];
 		then
@@ -405,6 +406,7 @@ wipejss()
 	
 	# Setting IFS back to default 
 	IFS=$OIFS
+
 }
 
 puttonewjss()
