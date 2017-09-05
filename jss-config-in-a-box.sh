@@ -232,11 +232,17 @@ grabexistingjssxml()
 			else
 				rm $formattedList
 			fi
+		fi
+		
+		if [ ${readwipe[$loop]} = "activationcode" ] || [ ${readwipe[$loop]} = "gsxconnection" ] || [ ${readwipe[$loop]} = "smtpserver" ];
+		then
+			echo -e "Single entry item. Generic plain list ${readwipe[$loop]} generated. \n"
+			echo "1" > $plainList
 		else
 			if [ `cat "$formattedList" | grep "<size>0" | wc -l | awk '{ print $1 }'` = "0" ];
 			then
 				echo -e "\n\nCreating a plain list of ${readwipe[$loop]} ID's \n"
-				cat $formattedList |awk -F'<id>|</id>' '/<id>/ {print $2}' > $plainList
+				cat $formattedList | awk -F'<id>|</id>' '/<id>/ {print $2}' > $plainList
 			else
 				rm $formattedList
 			fi
@@ -279,8 +285,8 @@ grabexistingjssxml()
 				;;
 
 				activationcode|gsxconnection|smtpserver)
-					echo "Downloading ID number $apiID"
-					curl -s -k --user "$origjssapiuser:$origjssapipwd" -H "Content-Type: application/xml" -X GET "$origjssaddress/JSSResource/${readwipe[$loop]}/" | xmllint --format - > $fetchedResult
+					echo "Downloading single entry"
+					curl -s -k --user "$origjssapiuser:$origjssapipwd" -H "Content-Type: application/xml" -X GET "$origjssaddress/JSSResource/${readwipe[$loop]}" | xmllint --format - > $fetchedResult
 				;;
 
 				*)
