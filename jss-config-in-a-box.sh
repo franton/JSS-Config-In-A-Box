@@ -22,11 +22,12 @@
 # v1.6 : 31-07-2017 - Found the order to read things out is different to writing them back. So 2nd array goes in to fix.
 # v1.7 : 23-08-2017 - Explicitly specifying xml to the JSS seems to help a little with certain edge cases.
 # v1.8 : 30-08-2017 - Enforces xml use with the JSS API. Different java installs default to JSON.
+# v1.9 : 05-09-2017 - Thanks to Graham Pugh who found issues with SMTP server setting. Now fixed along with gsxconnection.
 
 # Set up variables here
 export resultInt=1
-export currentver="1.8"
-export currentverdate="30th August 2017"
+export currentver="1.9"
+export currentverdate="5th September 2017"
 
 # These are the categories we're going to save or wipe
 declare -a readwipe
@@ -80,6 +81,7 @@ readwipe[46]="userextensionattributes"		# User configuration
 readwipe[47]="usergroups"
 readwipe[48]="users"
 readwipe[49]="advancedusersearches"
+readwipe[50]="gsxconnection"
 
 # These are the categories we're going to upload. Ordering is different from read/wipe.
 declare -a writebk
@@ -133,6 +135,7 @@ writebk[46]="userextensionattributes"				# User configuration
 writebk[47]="usergroups"
 writebk[48]="users"
 writebk[49]="advancedusersearches"
+writebk[50]="gsxconnection"
 
 # Start functions here
 doesxmlfolderexist()
@@ -274,7 +277,12 @@ grabexistingjssxml()
 						let "resultInt = $resultInt + 1"
 					done			
 				;;
-			
+
+				activationcode|gsxconnection|smtpserver)
+					echo "Downloading ID number $apiID"
+					curl -s -k --user "$origjssapiuser:$origjssapipwd" -H "Content-Type: application/xml" -X GET "$origjssaddress/JSSResource/${readwipe[$loop]}/" | xmllint --format - > $fetchedResult
+				;;
+
 				*)
 					totalFetchedIDs=`cat "$plainList" | wc -l | sed -e 's/^[ \t]*//'`
 
@@ -474,6 +482,18 @@ puttonewjss()
 						let "postInt_smart = $postInt_smart + 1"
 						echo -e "\nPosting $parsedXML_smart ( $postInt_smart out of $totalParsedResourceXML_smartGroups )"
 						curl -k -H "Content-Type: application/xml" -X POST --data-binary @"$parsedXML_smart" "$destjssaddress$jssinstance/JSSResource/${writebk[$loop]}/id/0" -u "$destjssapiuser:$destjssapipwd"
+					done
+				;;
+				
+				activationcode|gsxconnection|smtpserver)
+					totalParsedResourceXML=$(ls $xmlloc/${writebk[$loop]}/parsed_xml | wc -l | sed -e 's/^[ \t]*//')
+					postInt=0	
+
+					for parsedXML in $(ls $xmlloc/${writebk[$loop]}/parsed_xml)
+					do
+						let "postInt = $postInt + 1"
+						echo -e "\nPosting $parsedXML ( $postInt out of $totalParsedResourceXML )"
+						curl -k -H "Content-Type: application/xml" -X PUT --data-binary @"$xmlloc/${writebk[$loop]}/parsed_xml/$parsedXML" "$destjssaddress$jssinstance/JSSResource/${writebk[$loop]}/" -u "$destjssapiuser:$destjssapipwd"
 					done
 				;;
 		
