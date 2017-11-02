@@ -26,8 +26,8 @@
 
 # Set up variables here
 export resultInt=1
-export currentver="1.9"
-export currentverdate="5th September 2017"
+export currentver="2.0"
+export currentverdate="2nd November 2017"
 
 # These are the categories we're going to save or wipe
 declare -a readwipe
@@ -543,6 +543,8 @@ MainMenu()
 
 		case "$choice" in
 			1)
+				doesxmlfolderexist
+				
 				echo -e "\n"
 				read -p "Enter the originating JSS server address (https://www.example.com:8443) : " jssaddress
 				read -p "Enter the originating JSS server api username : " jssapiuser
@@ -622,7 +624,6 @@ echo -e "11. Policies that have Self Service icons and individual computers as a
 echo -e "12. Policies with LDAP Users and Groups limitations will have these stripped before migration."
 
 # Call functions to make this work here
-doesxmlfolderexist
 MainMenu
 
 # All done!
