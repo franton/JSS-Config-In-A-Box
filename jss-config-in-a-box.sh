@@ -567,6 +567,20 @@ MainMenu()
 				grabexistingjssxml
 			;;
 			2)
+				echo -e "\nPlease enter the path to store data"
+				read -p "(Or enter to use $HOME/Desktop/JSS_Config) : " xmlloc
+
+				if [[ $path = "" ]];
+				then
+					export xmlloc="$HOME/Desktop/JSS_Config"
+				fi
+
+				if [[ ! -d $path ]];
+				then
+					echo -e "\nERROR: Specified directory does not exist. Exiting."
+					continue
+				fi
+
 				echo -e "\n"
 				read -p "Enter the destination JSS server address (https://example.jamfcloud.com:443) : " jssaddress
 				read -p "Enter the destination JSS server api username : " jssapiuser
