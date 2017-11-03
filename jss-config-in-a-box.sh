@@ -23,11 +23,14 @@
 # v1.7 : 23-08-2017 - Explicitly specifying xml to the JSS seems to help a little with certain edge cases.
 # v1.8 : 30-08-2017 - Enforces xml use with the JSS API. Different java installs default to JSON.
 # v1.9 : 05-09-2017 - Thanks to Graham Pugh who found issues with SMTP server setting. Now fixed along with gsxconnection.
+# v2.0 : 02-11-2017 - Moved the xml archiving code around so it only runs at download.
+# v2.1 : 03-11-2017 - Thanks to Sam Fortuna at Jamf who pointed out why password uploads were not working. Now they upload with temp password set below.
 
 # Set up variables here
 export resultInt=1
-export currentver="2.0"
-export currentverdate="2nd November 2017"
+export currentver="2.1"
+export currentverdate="3rd November 2017"
+export temppassword="changemenow"
 
 # These are the categories we're going to save or wipe
 declare -a readwipe
@@ -334,7 +337,7 @@ grabexistingjssxml()
 							echo "Policy $resourceXML is not assigned to a category. Ignoring."
 						else
 							echo "Processing policy file $resourceXML ."
-							cat $xmlloc/${readwipe[$loop]}/fetched_xml/$resourceXML | grep -v "<id>" | sed '/<computers>/,/<\/computers>/d' | sed '/<self_service_icon>/,/<\/self_service_icon>/d' | sed '/<limit_to_users>/,/<\/limit_to_users>/d' | sed '/<users>/,/<\/users>/d' | sed '/<user_groups>/,/<\/user_groups>/d' > $xmlloc/${readwipe[$loop]}/parsed_xml/parsed_"$resourceXML"
+							cat $xmlloc/${readwipe[$loop]}/fetched_xml/$resourceXML | grep -v "<id>" | sed '/<computers>/,/<\/computers>/d' | sed '/<self_service_icon>/,/<\/self_service_icon>/d' | sed '/<limit_to_users>/,/<\/limit_to_users>/d' | sed '/<users>/,/<\/users>/d' | sed '/<user_groups>/,/<\/user_groups>/d' | sed 's/^.*<password_sha256.*/<password>'"${temppassword}"'<\/password>/' | sed 's/^.*<of_password_sha256.*/<of_password>'"${temppassword}"'<\/of_password>/' > $xmlloc/${readwipe[$loop]}/parsed_xml/parsed_"$resourceXML"
 						fi
 					done
 				;;
@@ -345,7 +348,7 @@ grabexistingjssxml()
 					for resourceXML in $(ls $xmlloc/${readwipe[$loop]}/fetched_xml)
 					do
 						echo "Parsing $resourceXML"
-						cat $xmlloc/${readwipe[$loop]}/fetched_xml/$resourceXML | grep -v "<id>" > $xmlloc/${readwipe[$loop]}/parsed_xml/parsed_"$resourceXML"
+						cat $xmlloc/${readwipe[$loop]}/fetched_xml/$resourceXML | grep -v "<id>" | sed 's/^.*<password_sha256.*/<password>'"${temppassword}"'<\/password>/' > $xmlloc/${readwipe[$loop]}/parsed_xml/parsed_"$resourceXML"
 					done
 				;;
 			esac
@@ -567,7 +570,7 @@ MainMenu()
 				grabexistingjssxml
 			;;
 			2)
-				echo -e "\nPlease enter the path to store data"
+				echo -e "\nPlease enter the path to read data"
 				read -p "(Or enter to use $HOME/Desktop/JSS_Config) : " xmlloc
 
 				if [[ $path = "" ]];
@@ -575,7 +578,7 @@ MainMenu()
 					export xmlloc="$HOME/Desktop/JSS_Config"
 				fi
 
-				if [[ ! -d $path ]];
+				if [[ ! -d "$xmlloc" ]];
 				then
 					echo -e "\nERROR: Specified directory does not exist. Exiting."
 					continue
