@@ -25,11 +25,12 @@
 # v1.9 : 05-09-2017 - Thanks to Graham Pugh who found issues with SMTP server setting. Now fixed along with gsxconnection.
 # v2.0 : 02-11-2017 - Moved the xml archiving code around so it only runs at download.
 # v2.1 : 03-11-2017 - Thanks to Sam Fortuna at Jamf who pointed out why password uploads were not working. Now they upload with temp password set below.
+# v2.2 : 02-11-2018 - Apparently my local copy was out of sync with Github. Meaningless version bump to try and sync.
 
 # Set up variables here
 export resultInt=1
-export currentver="2.1"
-export currentverdate="3rd November 2017"
+export currentver="2.2"
+export currentverdate="2rd November 2018"
 export temppassword="changemenow"
 
 # These are the categories we're going to save or wipe
@@ -145,12 +146,12 @@ doesxmlfolderexist()
 {
 	# Where shall we store all this lovely xml?
 	echo -e "\nPlease enter the path to store data"
-	read -p "(Or enter to use $HOME/Desktop/JSS_Config) : " xmlloc
+	read -p "(Or enter to use $HOME/Desktop/JPS/JSS_Config) : " xmlloc
 
 	# Check for the skip
 	if [[ $path = "" ]];
 	then
-		export xmlloc="$HOME/Desktop/JSS_Config"
+		export xmlloc="$HOME/Desktop/CS-JPS/JSS_Config"
 	fi
 
 	# Check and create the JSS xml folder and archive folders if missing.
@@ -260,7 +261,7 @@ grabexistingjssxml()
 					for userID in $( cat $plainListAccountsUsers )
 					do
 						echo "Downloading User ID number $userID ( $resultInt out of $totalFetchedIDsUsers )"
-						fetchedResultAccountsUsers=$( curl --silent -k --user "$origjssapiuser:$origjssapipwd" -H "Content-Type: application/xml" -X GET "$origjssaddress/JSSResource/${readwipe[$loop]}/userid/$userID" | xmllint --format - )
+						fetchedResultAccountsUsers=$( curl --silent -k --user "$origjssapiuser:$origjssapipwd" -H "Accept: application/xml" -X GET "$origjssaddress/JSSResource/${readwipe[$loop]}/userid/$userID" | xmllint --format - )
 						itemID=$( echo "$fetchedResultAccountsUsers" | grep "<id>" | awk -F '<id>|</id>' '{ print $2; exit; }')
 						itemName=$( echo "$fetchedResultAccountsUsers" | grep "<name>" | awk -F '<name>|</name>' '{ print $2; exit; }')
 						cleanedName=$( echo "$itemName" | sed 's/[:\/\\]//g' )
@@ -276,7 +277,7 @@ grabexistingjssxml()
 					for groupID in $( cat $plainListAccountsGroups )
 					do
 						echo "Downloading Group ID number $groupID ( $resultInt out of $totalFetchedIDsGroups )"
-						fetchedResultAccountsGroups=$( curl --silent -k --user "$origjssapiuser:$origjssapipwd" -H "Content-Type: application/xml" -X GET "$origjssaddress/JSSResource/${readwipe[$loop]}/groupid/$groupID" | xmllint --format - )
+						fetchedResultAccountsGroups=$( curl --silent -k --user "$origjssapiuser:$origjssapipwd" -H "Accept: application/xml" -X GET "$origjssaddress/JSSResource/${readwipe[$loop]}/groupid/$groupID" | xmllint --format - )
 						itemID=$( echo "$fetchedResultAccountsGroups" | grep "<id>" | awk -F '<id>|</id>' '{ print $2; exit; }')
 						itemName=$( echo "$fetchedResultAccountsGroups" | grep "<name>" | awk -F '<name>|</name>' '{ print $2; exit; }')
 						cleanedName=$( echo "$itemName" | sed 's/[:\/\\]//g' )
@@ -289,7 +290,7 @@ grabexistingjssxml()
 
 				activationcode|gsxconnection|smtpserver)
 					echo "Downloading single entry"
-					curl -s -k --user "$origjssapiuser:$origjssapipwd" -H "Content-Type: application/xml" -X GET "$origjssaddress/JSSResource/${readwipe[$loop]}" | xmllint --format - > $fetchedResult
+					curl -s -k --user "$origjssapiuser:$origjssapipwd" -H "Accept: application/xml" -X GET "$origjssaddress/JSSResource/${readwipe[$loop]}" | xmllint --format - > $fetchedResult
 				;;
 
 				*)
@@ -298,7 +299,7 @@ grabexistingjssxml()
 					for apiID in $(cat $plainList)
 					do
 						echo "Downloading ID number $apiID ( $resultInt out of $totalFetchedIDs )"
-						curl -s -k --user "$origjssapiuser:$origjssapipwd" -H "Content-Type: application/xml" -X GET "$origjssaddress/JSSResource/${readwipe[$loop]}/id/$apiID" | xmllint --format - > $fetchedResult
+						curl -s -k --user "$origjssapiuser:$origjssapipwd" -H "Accept: application/xml" -X GET "$origjssaddress/JSSResource/${readwipe[$loop]}/id/$apiID" | xmllint --format - > $fetchedResult
 						resultInt=$(($resultInt + 1))
 						fetchedResult=$xmlloc/${readwipe[$loop]}/fetched_xml/result"$resultInt".xml
 					done	
@@ -571,11 +572,11 @@ MainMenu()
 			;;
 			2)
 				echo -e "\nPlease enter the path to read data"
-				read -p "(Or enter to use $HOME/Desktop/JSS_Config) : " xmlloc
+				read -p "(Or enter to use $HOME/Desktop/CS-JPS/JSS_Config) : " xmlloc
 
 				if [[ $path = "" ]];
 				then
-					export xmlloc="$HOME/Desktop/JSS_Config"
+					export xmlloc="$HOME/Desktop/CS-JPS/JSS_Config"
 				fi
 
 				if [[ ! -d "$xmlloc" ]];
