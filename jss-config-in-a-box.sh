@@ -26,6 +26,7 @@
 # v2.0 : 02-11-2017 - Moved the xml archiving code around so it only runs at download.
 # v2.1 : 03-11-2017 - Thanks to Sam Fortuna at Jamf who pointed out why password uploads were not working. Now they upload with temp password set below.
 # v2.2 : 02-11-2018 - Apparently my local copy was out of sync with Github. Meaningless version bump to try and sync.
+# v2.5 : 05-09-2022 - Updated for new jamf api authentication method. Tidied up the array variables too.
 
 # Set up variables here
 export resultInt=1
@@ -35,57 +36,58 @@ export temppassword="changemenow"
 
 # These are the categories we're going to save or wipe
 declare -a readwipe
-readwipe[0]="sites"							# Backend configuration
-readwipe[1]="categories"
-readwipe[2]="ldapservers"
-readwipe[3]="accounts"
-readwipe[4]="buildings"
-readwipe[5]="departments"
-readwipe[6]="directorybindings"
-readwipe[7]="removablemacaddresses"
-readwipe[8]="netbootservers"
-readwipe[9]="distributionpoints"
-readwipe[10]="softwareupdateservers"
-readwipe[11]="networksegments"
-readwipe[12]="healthcarelistener"
-readwipe[13]="ibeacons"
-readwipe[14]="infrastructuremanager"
-readwipe[15]="peripherals"
-readwipe[16]="peripheraltypes"
-readwipe[17]="smtpserver"
-readwipe[18]="vppaccounts"
-readwipe[19]="vppassignments"
-readwipe[20]="vppinvitations"
-readwipe[21]="webhooks"
-readwipe[22]="diskencryptionconfigurations"
-readwipe[23]="ebooks"
-readwipe[24]="computergroups" 				# Computer configuration
-readwipe[25]="dockitems"
-readwipe[26]="printers"
-readwipe[27]="licensedsoftware"
-readwipe[28]="scripts"
-readwipe[29]="computerextensionattributes"
-readwipe[30]="restrictedsoftware"
-readwipe[31]="osxconfigurationprofiles"
-readwipe[32]="macapplications"
-readwipe[33]="managedpreferenceprofiles"
-readwipe[34]="packages"
-readwipe[35]="policies"
-readwipe[36]="advancedcomputersearches"
-readwipe[37]="patches"
-readwipe[38]="mobiledevicegroups"			# Mobile configuration
-readwipe[39]="mobiledeviceapplications"
-readwipe[40]="mobiledeviceconfigurationprofiles"
-readwipe[41]="mobiledeviceenrollmentprofiles"
-readwipe[42]="mobiledeviceextensionattributes"
-readwipe[43]="mobiledeviceprovisioningprofiles"
-readwipe[44]="classes"
-readwipe[45]="advancedmobiledevicesearches"
-readwipe[46]="userextensionattributes"		# User configuration
-readwipe[47]="usergroups"
-readwipe[48]="users"
-readwipe[49]="advancedusersearches"
-readwipe[50]="gsxconnection"
+readwipe=()
+readwipe+=("sites")
+readwipe+=("categories")
+readwipe+=("ldapservers")
+#readwipe+=("accounts")
+readwipe+=("buildings")
+readwipe+=("departments")
+readwipe+=("directorybindings")
+readwipe+=("removablemacaddresses")
+readwipe+=("netbootservers")
+readwipe+=("distributionpoints")
+readwipe+=("softwareupdateservers")
+readwipe+=("networksegments")
+readwipe+=("healthcarelistener")
+readwipe+=("ibeacons")
+readwipe+=("infrastructuremanager")
+readwipe+=("peripherals")
+readwipe+=("peripheraltypes")
+readwipe+=("smtpserver")
+readwipe+=("vppaccounts")
+readwipe+=("vppassignments")
+readwipe+=("vppinvitations")
+readwipe+=("webhooks")
+readwipe+=("diskencryptionconfigurations")
+readwipe+=("ebooks")
+readwipe+=("computergroups")
+readwipe+=("dockitems")
+readwipe+=("printers")
+readwipe+=("licensedsoftware")
+readwipe+=("scripts")
+readwipe+=("computerextensionattributes")
+readwipe+=("restrictedsoftware")
+readwipe+=("osxconfigurationprofiles")
+readwipe+=("macapplications")
+readwipe+=("managedpreferenceprofiles")
+readwipe+=("packages")
+readwipe+=("policies")
+readwipe+=("advancedcomputersearches")
+readwipe+=("patches")
+readwipe+=("mobiledevicegroups")
+readwipe+=("mobiledeviceapplications")
+readwipe+=("mobiledeviceconfigurationprofiles")
+readwipe+=("mobiledeviceenrollmentprofiles")
+readwipe+=("mobiledeviceextensionattributes")
+readwipe+=("mobiledeviceprovisioningprofiles")
+readwipe+=("classes")
+readwipe+=("advancedmobiledevicesearches")
+readwipe+=("userextensionattributes")
+readwipe+=("usergroups")
+#readwipe+=("users")
+readwipe+=("advancedusersearches")
+#readwipe+=("gsxconnection")
 
 # These are the categories we're going to upload. Ordering is different from read/wipe.
 declare -a writebk
@@ -151,7 +153,7 @@ doesxmlfolderexist()
 	# Check for the skip
 	if [[ $path = "" ]];
 	then
-		export xmlloc="$HOME/Desktop/CS-JPS/JSS_Config"
+		export xmlloc="$HOME/Desktop/JPS/JSS_Config"
 	fi
 
 	# Check and create the JSS xml folder and archive folders if missing.
@@ -196,6 +198,12 @@ doesxmlfolderexist()
 
 grabexistingjssxml()
 {
+	# Generate bearer auth token for later use
+	jsonoutput=$( /usr/bin/curl -s -u "$origjssapiuser:$origjssapipwd" -k "${origjssaddress}${jssinstance}/api/v1/auth/token" -X POST )
+	accesstoken=$( /usr/bin/plutil -extract token raw -o - - <<< "$jsonoutput" )
+	tokenexpiry=$( /usr/bin/plutil -extract expires raw -o - - <<< "$jsonoutput" )
+	tokenexpepoch=$( /bin/date -j -f "%Y-%m-%dT%T" "$tokenexpiry" +"%s" )
+
 	# Setting IFS Env to only use new lines as field seperator 
 	OIFS=$IFS
 	IFS=$'\n'
@@ -216,8 +224,22 @@ grabexistingjssxml()
 		export fetchedResultAccountsGroups=$xmlloc/${readwipe[$loop]}/fetched_xml/groupResult"$resultInt".xml	
 	
 		# Grab all existing ID's for the current category we're processing
+		currentepoch=$( /bin/date +%s )
+		timediff="$((tokenexpepoch-currentepoch))"
+		
+		echo "Time to token expiry: $timediff"
+		
+		if [ "$timediff" -le 240 ];
+		then
+			echo "Renewing API token"
+			jsonoutput=$( /usr/bin/curl -s -k -X POST "${origjssaddress}${jssinstance}/api/v1/auth/token" -H "authorization: Bearer ${accesstoken}" )
+			accesstoken=$( /usr/bin/plutil -extract token raw -o - - <<< "$jsonoutput" )
+			tokenexpiry=$( /usr/bin/plutil -extract expires raw -o - - <<< "$jsonoutput" )
+			tokenexpepoch=$( /bin/date -j -f "%Y-%m-%dT%T" "$tokenexpiry" +"%s" )
+		fi
+		
 		echo -e "\n\nCreating ID list for ${readwipe[$loop]} on template JSS \n"
-		curl -s -k $origjssaddress$jssinstance/JSSResource/${readwipe[$loop]} -H "Accept: application/xml" --user "$origjssapiuser:$origjssapipwd" | xmllint --format - > $formattedList
+		curl -s -k $origjssaddress$jssinstance/JSSResource/${readwipe[$loop]} -H "Accept: application/xml" -H "authorization: Bearer ${accesstoken}" | xmllint --format - > $formattedList
 
 		if [ ${readwipe[$loop]} = "accounts" ];
 		then
@@ -290,7 +312,7 @@ grabexistingjssxml()
 
 				activationcode|gsxconnection|smtpserver)
 					echo "Downloading single entry"
-					curl -s -k --user "$origjssapiuser:$origjssapipwd" -H "Accept: application/xml" -X GET "$origjssaddress/JSSResource/${readwipe[$loop]}" | xmllint --format - > $fetchedResult
+					curl -s -k -H "authorization: Bearer ${accesstoken}" -H "Accept: application/xml" -X GET "$origjssaddress/JSSResource/${readwipe[$loop]}" | xmllint --format - > $fetchedResult
 				;;
 
 				*)
@@ -299,7 +321,7 @@ grabexistingjssxml()
 					for apiID in $(cat $plainList)
 					do
 						echo "Downloading ID number $apiID ( $resultInt out of $totalFetchedIDs )"
-						curl -s -k --user "$origjssapiuser:$origjssapipwd" -H "Accept: application/xml" -X GET "$origjssaddress/JSSResource/${readwipe[$loop]}/id/$apiID" | xmllint --format - > $fetchedResult
+						curl -s -k -H "authorization: Bearer ${accesstoken}" -H "Accept: application/xml" -X GET "$origjssaddress/JSSResource/${readwipe[$loop]}/id/$apiID" | xmllint --format - > $fetchedResult
 						resultInt=$(($resultInt + 1))
 						fetchedResult=$xmlloc/${readwipe[$loop]}/fetched_xml/result"$resultInt".xml
 					done	
@@ -357,6 +379,9 @@ grabexistingjssxml()
 			echo -e "\nResource ${readwipe[$loop]} empty. Skipping."
 		fi
 	done
+	
+	# Invalidating the access token
+	/usr/bin/curl -k "${origjssaddress}${jssinstance}/api/v1/auth/invalidate-token" -H "authorization: Bearer ${accesstoken}" -X POST
 	
 	# Setting IFS back to default 
 	IFS=$OIFS
@@ -572,11 +597,11 @@ MainMenu()
 			;;
 			2)
 				echo -e "\nPlease enter the path to read data"
-				read -p "(Or enter to use $HOME/Desktop/CS-JPS/JSS_Config) : " xmlloc
+				read -p "(Or enter to use $HOME/Desktop/JPS/JSS_Config) : " xmlloc
 
 				if [[ $path = "" ]];
 				then
-					export xmlloc="$HOME/Desktop/CS-JPS/JSS_Config"
+					export xmlloc="$HOME/Desktop/JPS/JSS_Config"
 				fi
 
 				if [[ ! -d "$xmlloc" ]];
